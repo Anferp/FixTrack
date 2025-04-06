@@ -1,0 +1,49 @@
+# Dependencias
+/node_modules
+
+# Archivos de entorno
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Directorios de build
+/dist
+/dist-ssr
+/build
+/out
+.output
+
+# Archivos de cobertura
+/coverage
+
+# Archivos específicos de frameworks frontend
+# Vue.js
+.nuxt
+
+# Testing
+/cypress/videos/
+/cypress/screenshots/
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.idea
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos temporales
+.DS_Store
+*.local
+.temp
+.cache 

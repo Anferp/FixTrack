@@ -1,0 +1,63 @@
+# Dependencias
+node_modules/
+/node_modules
+*/node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Archivos de entorno
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Directorios de build/producción
+/dist
+/build
+/out
+frontend/dist/
+frontend/build/
+backend/dist/
+backend/build/
+
+# Directorios de coverage
+/coverage
+frontend/coverage/
+backend/coverage/
+
+# Archivos de IDE/editores
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Archivos de bloqueo de dependencias
+# Depende de tu política de equipo si deseas incluirlos o no
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Archivos temporales
+.temp
+.tmp
+.cache 

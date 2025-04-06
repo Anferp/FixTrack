@@ -1,0 +1,32 @@
+@import './base.css';
+
+#app {
+  /* Se eliminan max-width, margin, padding que pueden interferir con layouts de ancho completo */
+  font-weight: normal;
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    /* Se elimina display: flex y place-items: center */
+    /* Permitimos que el body ocupe el espacio necesario y el contenido fluya normalmente */
+  }
+
+  #app {
+    /* Se eliminan display: flex, flex-direction, align-items, padding */
+    /* Permitimos que el componente App.vue y las vistas controlen su propio layout */
+  }
+}

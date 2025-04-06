@@ -1,0 +1,35 @@
+# Dependencias
+/node_modules
+
+# Archivos de entorno
+.env
+.env.*
+!.env.example
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Directorios de build
+/dist
+/build
+
+# Archivos de cobertura
+/coverage
+
+# Archivos temporales
+/tmp
+/temp
+
+# Archivos específicos del backend
+# SQLite database files (si se usan)
+*.sqlite
+*.sqlite3
+*.db
+
+# Directorios de almacenamiento de archivos (si se usan)
+/uploads
+/storage 
