@@ -11,10 +11,28 @@ export function useOrderService() {
    */
   async function getPublicOrder(ticketCode, securityKey) {
     try {
+      // Validar entradas
+      if (!ticketCode || !securityKey) {
+        throw new Error('El código de ticket y la clave de seguridad son obligatorios');
+      }
+      
+      // Limpiar espacios en blanco
+      ticketCode = ticketCode.trim();
+      securityKey = securityKey.trim();
+      
+      console.log(`Consultando orden: ${ticketCode} / ${securityKey}`);
+      
       const response = await fetch(`${baseApiUrl}/public/order/${ticketCode}/${securityKey}`);
       
       if (!response.ok) {
-        throw new Error('Orden no encontrada o clave incorrecta');
+        const errorData = await response.json();
+        console.error('Error en la respuesta:', errorData);
+        
+        if (response.status === 404) {
+          throw new Error('No se pudo encontrar la orden o la clave de seguridad es incorrecta.');
+        } else {
+          throw new Error(errorData.error || 'Error al consultar la orden');
+        }
       }
       
       const data = await response.json();

@@ -80,8 +80,22 @@ async function lookupOrder() {
   
   loading.value = true;
   error.value = '';
+  order.value = null;
+  updates.value = [];
+  comments.value = [];
   
   try {
+    // Validar formato
+    if (ticketCode.value.trim().length < 8) {
+      throw new Error('El código de ticket debe tener al menos 8 caracteres');
+    }
+    
+    if (securityKey.value.trim().length < 4) {
+      throw new Error('La clave de seguridad debe tener al menos 4 caracteres');
+    }
+    
+    console.log(`Consultando orden: ${ticketCode.value} / ${securityKey.value}`);
+    
     // Obtener información de la orden
     const orderData = await orderService.getPublicOrder(
       ticketCode.value, 
@@ -90,23 +104,31 @@ async function lookupOrder() {
     order.value = orderData;
 
     // Obtener actualizaciones de la orden
-    const updatesData = await orderService.getPublicOrderUpdates(
-      ticketCode.value,
-      securityKey.value
-    );
-    updates.value = updatesData;
+    try {
+      const updatesData = await orderService.getPublicOrderUpdates(
+        ticketCode.value,
+        securityKey.value
+      );
+      updates.value = updatesData;
+    } catch (updateErr) {
+      console.error('Error fetching updates:', updateErr);
+      // No interrumpimos el flujo si hay error en actualizaciones
+    }
 
     // Obtener comentarios visibles para el cliente
-    const commentsData = await orderService.getPublicOrderComments(
-      ticketCode.value,
-      securityKey.value
-    );
-    comments.value = commentsData;
+    try {
+      const commentsData = await orderService.getPublicOrderComments(
+        ticketCode.value,
+        securityKey.value
+      );
+      comments.value = commentsData;
+    } catch (commentErr) {
+      console.error('Error fetching comments:', commentErr);
+      // No interrumpimos el flujo si hay error en comentarios
+    }
   } catch (err) {
-    error.value = 'No se pudo encontrar la orden o la clave de seguridad es incorrecta. Por favor verifica la información e intenta nuevamente.';
-    order.value = null;
-    updates.value = [];
-    comments.value = [];
+    console.error('Error en lookupOrder:', err);
+    error.value = err.message || 'No se pudo encontrar la orden o la clave de seguridad es incorrecta. Por favor verifica la información e intenta nuevamente.';
   } finally {
     loading.value = false;
   }

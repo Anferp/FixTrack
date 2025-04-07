@@ -23,24 +23,7 @@ const getOrderByTicket = async (req, res) => {
     }
 
     // Find order with the given ticket code and security key
-    const order = await Order.findOne({
-      where: { 
-        ticket_code: ticket_code,
-        security_key: security_key
-      },
-      attributes: [
-        'ticket_code',
-        'client_name',
-        'client_contact',
-        'service_type',
-        'problem_description',
-        'status',
-        'accessories',
-        'created_at',
-        'updated_at',
-        'closed_at'
-      ]
-    });
+    const order = await Order.findByTicketAndKey(ticket_code, security_key);
 
     if (!order) {
       return res.status(404).json({
@@ -49,10 +32,25 @@ const getOrderByTicket = async (req, res) => {
       });
     }
 
+    // Seleccionar solo los atributos que queremos devolver
+    const orderData = {
+      ticket_code: order.ticket_code,
+      client_name: order.client_name,
+      client_phone: order.client_phone,
+      client_email: order.client_email,
+      service_type: order.service_type,
+      problem_description: order.problem_description,
+      status: order.status,
+      accessories: order.accessories,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      closed_at: order.closed_at
+    };
+
     return res.status(200).json({
       success: true,
       data: {
-        order
+        order: orderData
       }
     });
   } catch (error) {
@@ -83,13 +81,7 @@ const getOrderUpdates = async (req, res) => {
     }
 
     // Find order first to validate ticket and security key
-    const order = await Order.findOne({
-      where: { 
-        ticket_code: ticket_code,
-        security_key: security_key
-      },
-      attributes: ['id']
-    });
+    const order = await Order.findByTicketAndKey(ticket_code, security_key);
 
     if (!order) {
       return res.status(404).json({
@@ -143,13 +135,7 @@ const getOrderComments = async (req, res) => {
     }
 
     // Find order first to validate ticket and security key
-    const order = await Order.findOne({
-      where: { 
-        ticket_code: ticket_code,
-        security_key: security_key
-      },
-      attributes: ['id']
-    });
+    const order = await Order.findByTicketAndKey(ticket_code, security_key);
 
     if (!order) {
       return res.status(404).json({
