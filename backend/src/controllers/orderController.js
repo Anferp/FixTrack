@@ -554,11 +554,130 @@ const addComment = async (req, res) => {
   }
 };
 
+/**
+ * Update an order
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const updateOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      client_id,
+      client_name, 
+      client_phone,
+      client_email,
+      service_type, 
+      problem_description, 
+      accessories,
+      status
+    } = req.body;
+
+    // Find the order
+    const order = await Order.findByPk(id);
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: "Orden no encontrada"
+      });
+    }
+
+    // Check if user is authorized to update this order
+    if (req.user.role !== 'admin' && req.user.role !== 'secretary') {
+      return res.status(403).json({
+        success: false,
+        error: "No tienes permiso para actualizar esta orden"
+      });
+    }
+
+    // Update order fields
+    if (client_id && (client_name || client_phone || client_email)) {
+      // Buscar el cliente asociado
+      const client = await Client.findByPk(client_id);
+      
+      if (client) {
+        // Actualizar los campos del cliente si han cambiado
+        let clientUpdated = false;
+        
+        if (client_name && client_name !== client.name) {
+          client.name = client_name;
+          clientUpdated = true;
+        }
+        
+        if (client_phone && client_phone !== client.phone) {
+          client.phone = client_phone;
+          clientUpdated = true;
+        }
+        
+        if (client_email && client_email !== client.email) {
+          client.email = client_email;
+          clientUpdated = true;
+        }
+        
+        // Guardar cambios en el cliente si se actualizó algún campo
+        if (clientUpdated) {
+          await client.save();
+          console.log(`Cliente ID ${client_id} actualizado junto con la orden`);
+        }
+      }
+    }
+
+    if (service_type && service_type !== order.service_type) {
+      order.service_type = service_type;
+    }
+
+    if (problem_description && problem_description !== order.problem_description) {
+      order.problem_description = problem_description;
+    }
+
+    if (accessories && !accessories.every((item) => order.accessories.includes(item))) {
+      order.accessories = [...new Set([...order.accessories, ...accessories])];
+    }
+
+    if (status && status !== order.status) {
+      order.status = status;
+    }
+
+    await order.save();
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        order: {
+          id: order.id,
+          ticket_code: order.ticket_code,
+          security_key: order.security_key,
+          client_id: order.client_id,
+          client_name: order.client_name,
+          client_phone: order.client_phone,
+          client_email: order.client_email,
+          service_type: order.service_type,
+          problem_description: order.problem_description,
+          status: order.status,
+          accessories: order.accessories,
+          created_by: order.created_by,
+          created_at: order.createdAt,
+          updated_at: order.updatedAt
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error("Error updating order:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Error al actualizar la orden"
+    });
+  }
+};
+
 module.exports = {
   createOrder,
   getOrders,
   getOrderById,
   assignTechnician,
   closeOrder,
-  addComment
+  addComment,
+  updateOrder
 };

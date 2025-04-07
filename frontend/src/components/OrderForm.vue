@@ -157,7 +157,7 @@
                 <div v-if="duplicateClientInfo.phone"><strong>Teléfono:</strong> {{ duplicateClientInfo.phone }}</div>
                 <div v-if="duplicateClientInfo.email"><strong>Email:</strong> {{ duplicateClientInfo.email }}</div>
               </div>
-              <p class="alert-message">Para evitar registros duplicados, haga clic en "Usar este cliente" para seleccionarlo.</p>
+              <p class="alert-message">Para evitar registros duplicados, puede usar el cliente existente o actualizar sus datos.</p>
             </div>
             <div class="alert-actions">
               <button 
@@ -167,6 +167,14 @@
               >
                 <i class="material-icons btn-icon">check_circle</i>
                 Usar este cliente
+              </button>
+              <button 
+                type="button" 
+                class="update-client-btn" 
+                @click="updateExistingClient(duplicateClientInfo.id)"
+              >
+                <i class="material-icons btn-icon">edit</i>
+                Actualizar datos
               </button>
             </div>
           </div>
@@ -698,6 +706,82 @@ function useExistingClient(clientId) {
   emailError.value = '';
 }
 
+function updateExistingClient(clientId) {
+  // Mantener una referencia al cliente existente para actualizar después
+  const clientToUpdate = {
+    id: clientId,
+    name: orderData.client_name,
+    phone: orderData.client_phone,
+    email: orderData.client_email
+  };
+  
+  // Mostrar un mensaje de confirmación
+  if (confirm(`¿Desea actualizar los datos del cliente existente?\n\nNombre: ${duplicateClientInfo.value.name} → ${orderData.client_name}\nTeléfono: ${duplicateClientInfo.value.phone || ''} → ${orderData.client_phone}\nEmail: ${duplicateClientInfo.value.email || ''} → ${orderData.client_email}`)) {
+    // Realizar la actualización
+    updateClient(clientToUpdate)
+      .then(updatedClient => {
+        // Actualizar datos en la orden con los valores devueltos por la API
+        isNewClient.value = false;
+        orderData.client_id = updatedClient.id;
+        // Asegurar que los datos de la orden coincidan con los del cliente actualizado
+        orderData.client_name = updatedClient.name;
+        orderData.client_phone = updatedClient.phone || '';
+        orderData.client_email = updatedClient.email || '';
+        
+        // Limpiar mensajes de error y datos duplicados
+        duplicateClientInfo.value = null;
+        phoneError.value = '';
+        emailError.value = '';
+        
+        // Actualizar la lista de clientes para reflejar los cambios
+        if (clients.value && clients.value.length > 0) {
+          const index = clients.value.findIndex(client => client.id === updatedClient.id);
+          if (index !== -1) {
+            clients.value[index] = updatedClient;
+          }
+        }
+        
+        alert('Cliente actualizado correctamente');
+      })
+      .catch(error => {
+        console.error('Error al actualizar cliente:', error);
+        alert('Error al actualizar el cliente. Inténtelo de nuevo.');
+      });
+  }
+}
+
+async function updateClient(clientData) {
+  try {
+    const response = await fetch(`http://localhost:3000/api/clients/${clientData.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        name: clientData.name,
+        phone: clientData.phone,
+        email: clientData.email
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    if (!data.success) {
+      throw new Error(data.error || 'Error al actualizar el cliente');
+    }
+    
+    return data.data.client;
+  } catch (error) {
+    console.error('Error en updateClient:', error);
+    throw error;
+  }
+}
+
 function triggerSearch() {
   console.log('Ejecutando búsqueda con término:', clientSearchTerm.value);
   
@@ -1052,92 +1136,43 @@ function selectClient(client) {
 /* Estilos para la alerta de cliente duplicado */
 .duplicate-client-alert {
   background-color: #fff9e6;
-  border: 1px solid #ffd700;
-  border-radius: 6px;
-  padding: 15px;
-  margin: 15px 0;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  animation: fadeIn 0.3s ease-out;
-  transition: opacity 0.5s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  border-radius: 8px;
+  border: 1px solid #ffd699;
+  margin: 20px 0;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
 .alert-header {
+  background-color: #ffecb3;
+  padding: 12px 15px;
   display: flex;
   align-items: center;
-  margin-bottom: 10px;
+  border-bottom: 1px solid #ffd699;
 }
 
 .alert-icon {
-  color: #ff9800;
+  color: #f57c00;
   margin-right: 8px;
-  font-size: 24px;
+  font-size: 22px;
 }
 
 .alert-title {
   font-weight: 600;
-  color: #d97706;
+  color: #e65100;
   font-size: 16px;
 }
 
 .alert-content {
-  margin-bottom: 15px;
+  padding: 15px;
 }
 
 .client-info {
   background-color: rgba(255, 255, 255, 0.7);
-  padding: 10px;
-  border-radius: 4px;
-  margin-top: 10px;
-  font-size: 14px;
-}
-
-.client-info div {
-  margin-bottom: 5px;
-}
-
-.alert-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.use-client-btn {
-  padding: 10px 16px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  flex: 1;
-  background-color: #4caf50;
-  color: white;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.use-client-btn:hover {
-  background-color: #45a049;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
-}
-
-.use-client-btn:active {
-  transform: translateY(1px);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  padding: 10px 15px;
+  margin: 10px 0;
+  border-left: 3px solid #ffb74d;
 }
 
 .alert-message {
@@ -1151,9 +1186,47 @@ function selectClient(client) {
   border-left: 3px solid #ffc107;
 }
 
+.alert-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.use-client-btn, .update-client-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 15px;
+  border: none;
+  border-radius: 4px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.use-client-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.use-client-btn:hover {
+  background-color: #3d8b40;
+}
+
+.update-client-btn {
+  background-color: #2196F3;
+  color: white;
+}
+
+.update-client-btn:hover {
+  background-color: #0d8aee;
+}
+
 .btn-icon {
-  font-size: 18px;
   margin-right: 6px;
+  font-size: 18px;
 }
 
 .error-container {

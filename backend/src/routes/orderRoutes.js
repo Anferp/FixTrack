@@ -50,4 +50,11 @@ router.post('/:id/comments',
   orderController.addComment
 );
 
+// Actualizar una orden
+router.put(
+  '/:id',
+  hasRole([config.roles.ADMIN, config.roles.SECRETARY]),
+  orderController.updateOrder
+);
+
 module.exports = router;
