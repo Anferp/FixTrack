@@ -51,7 +51,11 @@ const Order = sequelize.define('Order', {
       notEmpty: true
     }
   },
-  client_contact: {
+  client_phone: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  client_email: {
     type: DataTypes.TEXT,
     allowNull: true
   },

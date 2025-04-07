@@ -18,6 +18,12 @@ router.get('/',
   clientController.getClients
 );
 
+// Verificar si un teléfono o correo ya existe
+router.get('/check-duplicate', 
+  hasRole([config.roles.SECRETARY, config.roles.ADMIN]),
+  clientController.checkDuplicate
+);
+
 router.post('/',
   hasRole([config.roles.SECRETARY, config.roles.ADMIN]),
   clientController.createClient

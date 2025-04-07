@@ -32,38 +32,74 @@
           
           <div v-if="!isNewClient" class="client-search" v-show="!isNewClient">
             <div class="form-group">
-              <label for="client_search">Buscar cliente</label>
+              <label for="client_input">Cliente</label>
               <div class="search-input-container">
                 <input
                   type="text"
-                  id="client_search"
+                  id="client_input"
                   v-model="clientSearchTerm"
-                  placeholder="Buscar por nombre, contacto, etc."
+                  placeholder="Buscar por nombre, teléfono o email"
                   :disabled="loading"
+                  @input="handleSearchInput"
+                  @keyup.enter="triggerSearch"
+                  class="client-search-input"
                 />
-                <span class="search-icon material-icons">search</span>
+                <span 
+                  v-if="clientSearchTerm" 
+                  class="clear-icon material-icons" 
+                  @click="clearSearch" 
+                  role="button" 
+                  title="Limpiar búsqueda"
+                >
+                  clear
+                </span>
+                <span 
+                  class="search-icon material-icons" 
+                  @click="triggerSearch" 
+                  role="button" 
+                  title="Buscar cliente"
+                >
+                  search
+                </span>
+                
+                <div v-show="showClientList && clients.length > 0" class="client-dropdown">
+                  <div class="dropdown-header">
+                    {{ clients.length }} cliente(s) encontrado(s) - Haga clic para seleccionar
+                  </div>
+                  <div 
+                    v-for="client in clients" 
+                    :key="client.id" 
+                    class="client-item" 
+                    @click="selectClient(client)"
+                  >
+                    <div class="client-name">{{ client.name }}</div>
+                    <div class="client-details">
+                      <span v-if="client.phone">Tel: {{ client.phone }}</span>
+                      <span v-if="client.email">Email: {{ client.email }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            
-            <div class="form-group">
-              <label for="client_select">Cliente</label>
+              
               <div v-if="loadingClients" class="loading-select">
                 <span class="loading-spinner-small"></span>
-                <span>Cargando clientes...</span>
+                <span>Buscando clientes...</span>
               </div>
-              <select
-                v-else
-                id="client_select"
-                v-model="orderData.client_id"
-                :disabled="loading"
-              >
-                <option v-for="client in clients" :key="client.id" :value="client.id">
-                  {{ client.name }} - {{ client.contact || client.email || client.phone || 'Sin contacto' }}
-                </option>
-              </select>
-              <p v-if="clientError" class="error-message">
-                {{ clientError }}
-              </p>
+              
+              <div v-if="clientError" class="error-container">
+                <p class="error-message">
+                  {{ clientError }}
+                </p>
+                <button 
+                  type="button" 
+                  class="refresh-button" 
+                  @click="fetchClients()"
+                  :disabled="loadingClients"
+                >
+                  <span class="material-icons">refresh</span>
+                  Refrescar lista
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -82,17 +118,58 @@
           </div>
 
           <div class="form-group">
-            <label for="client_contact">Contacto del Cliente *</label>
+            <label for="client_phone">Teléfono del Cliente *</label>
             <input
-              type="text"
-              id="client_contact"
-              v-model="orderData.client_contact"
+              type="tel"
+              id="client_phone"
+              v-model="orderData.client_phone"
+              @input="formatPhoneNumber"
               required
-              placeholder="Teléfono o email"
+              placeholder="Número telefónico"
               :disabled="loading || (!isNewClient && orderData.client_id)"
             />
+            <span v-if="phoneError" class="error-message">{{ phoneError }}</span>
+          </div>
+
+          <div class="form-group">
+            <label for="client_email">Correo Electrónico del Cliente</label>
+            <input
+              type="email"
+              id="client_email"
+              v-model="orderData.client_email"
+              @input="validateEmail"
+              placeholder="correo@ejemplo.com"
+              :disabled="loading || (!isNewClient && orderData.client_id)"
+            />
+            <span v-if="emailError" class="error-message">{{ emailError }}</span>
           </div>
           
+          <!-- Alerta de cliente duplicado -->
+          <div v-if="duplicateClientInfo && isNewClient" class="duplicate-client-alert">
+            <div class="alert-header">
+              <i class="material-icons alert-icon">info</i>
+              <span class="alert-title">Cliente ya registrado</span>
+            </div>
+            <div class="alert-content">
+              <p>Se encontró un cliente con la misma información:</p>
+              <div class="client-info">
+                <div><strong>Nombre:</strong> {{ duplicateClientInfo.name }}</div>
+                <div v-if="duplicateClientInfo.phone"><strong>Teléfono:</strong> {{ duplicateClientInfo.phone }}</div>
+                <div v-if="duplicateClientInfo.email"><strong>Email:</strong> {{ duplicateClientInfo.email }}</div>
+              </div>
+              <p class="alert-message">Para evitar registros duplicados, haga clic en "Usar este cliente" para seleccionarlo.</p>
+            </div>
+            <div class="alert-actions">
+              <button 
+                type="button" 
+                class="use-client-btn" 
+                @click="useExistingClient(duplicateClientInfo.id)"
+              >
+                <i class="material-icons btn-icon">check_circle</i>
+                Usar este cliente
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -231,7 +308,8 @@ const clientService = useClientService();
 const initialOrderData = {
   client_id: null,
   client_name: '',
-  client_contact: '',
+  client_phone: '',
+  client_email: '',
   service_type: '',
   problem_description: '',
   accessories: [''],
@@ -248,10 +326,17 @@ const technicianError = ref('');
 const clientError = ref('');
 const clientSearchTerm = ref('');
 const isNewClient = ref(false);
+const phoneError = ref('');
+const emailError = ref('');
+const duplicateClientInfo = ref(null);
+const checkingDuplicate = ref(false);
+const showClientList = ref(false);
 
 const formValid = computed(() => {
   return orderData.client_name.trim() !== '' &&
-         orderData.client_contact.trim() !== '' &&
+         orderData.client_phone.trim() !== '' &&
+         !phoneError.value &&
+         (orderData.client_email === '' || !emailError.value) &&
          orderData.service_type !== '' &&
          orderData.problem_description.trim() !== '';
 });
@@ -289,48 +374,87 @@ function submitOrder() {
   if (isNewClient.value) {
     // Si es un cliente nuevo, incluir datos y flag para crearlo
     orderPayload.client_name = orderData.client_name;
-    orderPayload.client_contact = orderData.client_contact;
-    orderPayload.client_email = orderData.client_email;
     orderPayload.client_phone = orderData.client_phone;
+    orderPayload.client_email = orderData.client_email;
     orderPayload.create_client = true;
   } else if (orderData.client_id) {
     // Si es un cliente existente, incluir su ID y nombre
     orderPayload.client_id = orderData.client_id;
     orderPayload.client_name = orderData.client_name;
-    orderPayload.client_contact = orderData.client_contact;
+    orderPayload.client_phone = orderData.client_phone;
+    orderPayload.client_email = orderData.client_email;
   } else {
     // Si no se seleccionó cliente pero se ingresó nombre, crear orden sin cliente registrado
     orderPayload.client_name = orderData.client_name;
-    orderPayload.client_contact = orderData.client_contact;
+    orderPayload.client_phone = orderData.client_phone;
+    orderPayload.client_email = orderData.client_email;
   }
 
   emit('submit', orderPayload);
 }
 
-// Cargar la lista de técnicos y clientes cuando se monta el componente
-onMounted(async () => {
-  await fetchTechnicians();
-  await fetchClients();
-});
-
-// Observar cambios en la búsqueda de clientes
-watch(clientSearchTerm, async (newValue) => {
-  if (newValue && newValue.length >= 3) {
-    await fetchClients(newValue);
+// Observar cambios en la búsqueda de clientes con debounce
+let searchTimeout = null;
+function handleSearchInput() {
+  showClientList.value = true;
+  
+  // Cancelar búsqueda anterior si existe
+  if (searchTimeout) {
+    clearTimeout(searchTimeout);
   }
-});
-
-// Observar cambios en la selección de cliente
-watch(() => orderData.client_id, (newValue) => {
-  if (newValue) {
-    // Buscar el cliente seleccionado
-    const selectedClient = clients.value.find(client => client.id === parseInt(newValue));
-    if (selectedClient) {
-      // Rellenar datos del cliente
-      orderData.client_name = selectedClient.name;
-      orderData.client_contact = selectedClient.contact || '';
-      isNewClient.value = false;
+  
+  // Crear un nuevo timeout para la búsqueda
+  searchTimeout = setTimeout(() => {
+    if (clientSearchTerm.value && clientSearchTerm.value.length >= 2) {
+      fetchClients(clientSearchTerm.value);
+    } else if (clientSearchTerm.value === '') {
+      fetchClients('');
     }
+  }, 300); // Esperar 300ms después de que el usuario deje de escribir
+}
+
+function clearSearch() {
+  clientSearchTerm.value = '';
+  fetchClients('');
+  showClientList.value = false;
+}
+
+// Al hacer clic fuera del dropdown, ocultarlo
+function setupClickOutside() {
+  document.addEventListener('click', (e) => {
+    const container = document.querySelector('.search-input-container');
+    const dropdown = document.querySelector('.client-dropdown');
+    const searchInput = document.getElementById('client_input');
+    
+    if (container && !container.contains(e.target) && dropdown && searchInput) {
+      showClientList.value = false;
+    }
+  });
+}
+
+onMounted(async () => {
+  try {
+    console.log('===============================================');
+    console.log('Iniciando carga de datos del formulario...');
+    
+    // Configurar detector de clics fuera del dropdown
+    setupClickOutside();
+    
+    // Cargar técnicos
+    console.log('Cargando técnicos...');
+    await fetchTechnicians();
+    
+    // Cargar todos los clientes al inicio sin filtro pero no mostrarlos
+    console.log('Cargando todos los clientes...');
+    clientSearchTerm.value = ''; // Asegurar que está vacío
+    showClientList.value = false; // Asegurarnos que no se muestra la lista
+    await fetchClients('');
+    
+    console.log('Datos iniciales cargados correctamente');
+    console.log('Token de autenticación:', localStorage.getItem('token') ? 'Presente' : 'Ausente');
+    console.log('===============================================');
+  } catch (error) {
+    console.error('Error al cargar datos iniciales:', error);
   }
 });
 
@@ -371,11 +495,17 @@ async function fetchClients(search = '') {
   try {
     const params = new URLSearchParams();
     if (search) {
-      params.append('search', search);
+      // Limpiar el texto de búsqueda para que sea más efectivo
+      params.append('search', search.trim());
     }
-    params.append('limit', '50');
+    params.append('limit', '100'); // Aumentar el límite para asegurar que se encuentren todos los clientes
     
-    const response = await fetch(`http://localhost:3000/api/clients?${params.toString()}`, {
+    console.log(`Buscando clientes con parámetros: ${params.toString()}`);
+    
+    const requestUrl = `http://localhost:3000/api/clients?${params.toString()}`;
+    console.log(`Realizando petición a: ${requestUrl}`);
+    
+    const response = await fetch(requestUrl, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -386,15 +516,32 @@ async function fetchClients(search = '') {
     }
     
     const data = await response.json();
+    console.log('Respuesta completa de API:', data);
     
     if (data.success) {
       clients.value = data.data.clients;
+      console.log(`Clientes encontrados (${clients.value.length}):`, clients.value);
+      
+      if (clients.value.length === 0) {
+        if (search) {
+          clientError.value = `No se encontraron clientes con: "${search}"`;
+        } else {
+          clientError.value = 'No hay clientes registrados en el sistema';
+        }
+        showClientList.value = false;
+      } else if (search) {
+        // Solo mostrar la lista si estamos buscando activamente
+        // y no en la carga inicial
+        showClientList.value = true;
+        clientError.value = '';
+      }
     } else {
       throw new Error(data.error || 'Error al obtener lista de clientes');
     }
   } catch (err) {
     console.error('Error fetching clients:', err);
     clientError.value = 'No se pudo cargar la lista de clientes';
+    showClientList.value = false;
   } finally {
     loadingClients.value = false;
   }
@@ -410,24 +557,172 @@ watch(() => isNewClient.value, (newValue) => {
     // Si no es un nuevo cliente, limpiar datos del formulario si no hay cliente seleccionado
     if (!orderData.client_id) {
       orderData.client_name = '';
-      orderData.client_contact = '';
+      orderData.client_phone = '';
+      orderData.client_email = '';
     }
   }
 });
 
 // Función para resetear los campos del formulario
 function resetFields() {
-  Object.assign(orderData, initialOrderData);
-  // Asegurarse de que accessories tenga al menos un campo vacío
-  if (!orderData.accessories || orderData.accessories.length === 0) {
-    orderData.accessories = [''];
-  }
+  // Restablecer todos los campos a sus valores iniciales
+  Object.assign(orderData, { ...initialOrderData });
+  isNewClient.value = false;
+  clientSearchTerm.value = '';
+  
+  // Restablecer errores
+  clientError.value = '';
+  technicianError.value = '';
+  phoneError.value = '';
+  emailError.value = '';
+  duplicateClientInfo.value = null;
 }
 
 // Exponer la función resetFields al componente padre
 defineExpose({
   resetFields
 });
+
+function formatPhoneNumber() {
+  // Eliminar todos los caracteres no numéricos
+  let phoneNumber = orderData.client_phone.replace(/\D/g, '');
+  
+  // Limitar a 10 dígitos (ajustar según el formato local)
+  if (phoneNumber.length > 10) {
+    phoneNumber = phoneNumber.substring(0, 10);
+  }
+  
+  // Aplicar formato: XXX-XXX-XXXX
+  if (phoneNumber.length > 0) {
+    if (phoneNumber.length <= 3) {
+      phoneNumber = phoneNumber;
+    } else if (phoneNumber.length <= 6) {
+      phoneNumber = phoneNumber.substring(0, 3) + '-' + phoneNumber.substring(3);
+    } else {
+      phoneNumber = phoneNumber.substring(0, 3) + '-' + phoneNumber.substring(3, 6) + '-' + phoneNumber.substring(6);
+    }
+  }
+  
+  // Actualizar el valor en el modelo de datos
+  orderData.client_phone = phoneNumber;
+  
+  // Validar el número de teléfono
+  if (orderData.client_phone && orderData.client_phone.replace(/\D/g, '').length < 10) {
+    phoneError.value = 'El número debe tener 10 dígitos';
+  } else {
+    phoneError.value = '';
+    
+    // Verificar duplicados
+    if (isNewClient.value && orderData.client_phone && orderData.client_phone.replace(/\D/g, '').length === 10) {
+      checkDuplicateContact('phone');
+    }
+  }
+}
+
+function validateEmail() {
+  // Expresión regular para validar correos electrónicos
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  
+  if (orderData.client_email && !emailRegex.test(orderData.client_email)) {
+    emailError.value = 'Formato de correo electrónico inválido';
+    duplicateClientInfo.value = null;
+  } else {
+    emailError.value = '';
+    
+    // Verificar duplicados solo si el email es válido y estamos creando un nuevo cliente
+    if (isNewClient.value && orderData.client_email && emailRegex.test(orderData.client_email)) {
+      checkDuplicateContact('email');
+    }
+  }
+}
+
+// Modificar la función para verificar duplicados
+async function checkDuplicateContact(type) {
+  if (!isNewClient.value) return;
+  
+  try {
+    checkingDuplicate.value = true;
+    let params = new URLSearchParams();
+    
+    if (type === 'phone' && orderData.client_phone) {
+      // No normalizar el teléfono - enviar con formato
+      params.append('phone', orderData.client_phone);
+    }
+    
+    if (type === 'email' && orderData.client_email) {
+      params.append('email', orderData.client_email);
+    }
+    
+    const response = await fetch(`http://localhost:3000/api/clients/check-duplicate?${params.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error('Error al verificar información de cliente');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success && data.data.exists) {
+      duplicateClientInfo.value = data.data.client;
+      
+      if (type === 'phone') {
+        phoneError.value = `Este teléfono ya está registrado para ${data.data.client.name}`;
+      } else if (type === 'email') {
+        emailError.value = `Este correo ya está registrado para ${data.data.client.name}`;
+      }
+    } else {
+      if (type === 'phone' && duplicateClientInfo.value && duplicateClientInfo.value.phone === orderData.client_phone) {
+        duplicateClientInfo.value = null;
+      } else if (type === 'email' && duplicateClientInfo.value && duplicateClientInfo.value.email === orderData.client_email) {
+        duplicateClientInfo.value = null;
+      }
+    }
+  } catch (error) {
+    console.error('Error checking duplicate client:', error);
+  } finally {
+    checkingDuplicate.value = false;
+  }
+}
+
+function useExistingClient(clientId) {
+  isNewClient.value = false;
+  orderData.client_id = clientId;
+  orderData.client_name = duplicateClientInfo.value.name;
+  orderData.client_phone = duplicateClientInfo.value.phone || '';
+  orderData.client_email = duplicateClientInfo.value.email || '';
+  duplicateClientInfo.value = null;
+  phoneError.value = '';
+  emailError.value = '';
+}
+
+function triggerSearch() {
+  console.log('Ejecutando búsqueda con término:', clientSearchTerm.value);
+  
+  if (clientSearchTerm.value && clientSearchTerm.value.trim() !== '') {
+    // Si hay un término de búsqueda, buscar por ese término
+    const searchTerm = clientSearchTerm.value.trim();
+    console.log(`Buscando clientes con término: "${searchTerm}"`);
+    fetchClients(searchTerm);
+    showClientList.value = true;
+  } else {
+    // Si el campo está vacío, cargar todos los clientes
+    console.log('Término de búsqueda vacío, cargando todos los clientes');
+    fetchClients('');
+    showClientList.value = true;
+  }
+}
+
+function selectClient(client) {
+  orderData.client_id = client.id;
+  orderData.client_name = client.name;
+  orderData.client_phone = client.phone || '';
+  orderData.client_email = client.email || '';
+  isNewClient.value = false;
+  showClientList.value = false;
+}
 
 </script>
 
@@ -471,6 +766,23 @@ defineExpose({
 
 .search-input-container {
   position: relative;
+  margin-bottom: 5px;
+  width: 100%;
+  display: inline-block;
+}
+
+.client-search-input {
+  width: 100%;
+  display: block;
+  padding-right: 80px; /* Espacio para los íconos */
+  background-color: #f9f9f9;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+.client-search-input:focus {
+  background-color: #fff;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
 }
 
 .search-icon {
@@ -480,6 +792,33 @@ defineExpose({
   transform: translateY(-50%);
   font-size: 18px;
   color: var(--medium-gray);
+  cursor: pointer;
+  transition: color 0.3s;
+  padding: 5px;
+  border-radius: 50%;
+  background-color: #f0f0f0;
+}
+
+.clear-icon {
+  position: absolute;
+  right: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 18px;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.3s;
+  padding: 5px;
+  border-radius: 50%;
+}
+
+.clear-icon:hover {
+  color: #f44336;
+}
+
+.search-icon:hover {
+  color: var(--primary-blue);
+  background-color: #e0e0e0;
 }
 
 .client-data.new-client {
@@ -708,5 +1047,186 @@ defineExpose({
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Estilos para la alerta de cliente duplicado */
+.duplicate-client-alert {
+  background-color: #fff9e6;
+  border: 1px solid #ffd700;
+  border-radius: 6px;
+  padding: 15px;
+  margin: 15px 0;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease-out;
+  transition: opacity 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alert-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.alert-icon {
+  color: #ff9800;
+  margin-right: 8px;
+  font-size: 24px;
+}
+
+.alert-title {
+  font-weight: 600;
+  color: #d97706;
+  font-size: 16px;
+}
+
+.alert-content {
+  margin-bottom: 15px;
+}
+
+.client-info {
+  background-color: rgba(255, 255, 255, 0.7);
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.client-info div {
+  margin-bottom: 5px;
+}
+
+.alert-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.use-client-btn {
+  padding: 10px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  flex: 1;
+  background-color: #4caf50;
+  color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.use-client-btn:hover {
+  background-color: #45a049;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.use-client-btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.alert-message {
+  color: #d97706;
+  font-weight: 500;
+  margin-top: 10px;
+  padding: 8px;
+  background-color: rgba(255, 215, 0, 0.15);
+  border-radius: 4px;
+  text-align: center;
+  border-left: 3px solid #ffc107;
+}
+
+.btn-icon {
+  font-size: 18px;
+  margin-right: 6px;
+}
+
+.error-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.refresh-button {
+  background: none;
+  border: none;
+  color: var(--primary-blue);
+  cursor: pointer;
+  padding: 0;
+  font: inherit;
+  outline: inherit;
+  text-decoration: underline;
+}
+
+.client-dropdown {
+  position: absolute;
+  width: 100%; /* Mismo ancho que el input */
+  background-color: white;
+  border: 1px solid var(--light-blue);
+  border-radius: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 5px;
+  z-index: 1000;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  top: 100%;
+  left: 0;
+}
+
+.dropdown-header {
+  padding: 8px 15px;
+  background-color: #f0f8ff;
+  font-size: 13px;
+  color: var(--primary-blue);
+  font-weight: 500;
+  border-bottom: 1px solid var(--light-blue);
+  text-align: center;
+}
+
+.client-item {
+  padding: 12px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.client-item:last-child {
+  border-bottom: none;
+}
+
+.client-item:hover {
+  background-color: #f5f9ff;
+}
+
+.client-name {
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: var(--dark-gray);
+}
+
+.client-details {
+  color: var(--medium-gray);
+  font-size: 12px;
+  display: flex;
+  gap: 10px;
+}
+
+.client-details span {
+  display: inline-block;
 }
 </style>

@@ -18,7 +18,11 @@ const Client = sequelize.define('Client', {
       notEmpty: true
     }
   },
-  contact: {
+  phone: {
+    type: DataTypes.TEXT,
+    allowNull: true
+  },
+  email: {
     type: DataTypes.TEXT,
     allowNull: true
   },
@@ -45,7 +49,8 @@ Client.findBySearchTerm = async function(searchTerm, options = {}) {
   if (searchTerm) {
     whereClause[Op.or] = [
       { name: { [Op.like]: `%${searchTerm}%` } },
-      { contact: { [Op.like]: `%${searchTerm}%` } }
+      { phone: { [Op.like]: `%${searchTerm}%` } },
+      { email: { [Op.like]: `%${searchTerm}%` } }
     ];
   }
   

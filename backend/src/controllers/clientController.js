@@ -20,7 +20,8 @@ const getClients = async (req, res) => {
     if (search) {
       whereClause[Op.or] = [
         { name: { [Op.like]: `%${search}%` } },
-        { contact: { [Op.like]: `%${search}%` } }
+        { phone: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } }
       ];
     }
     
@@ -64,7 +65,7 @@ const getClients = async (req, res) => {
  */
 const createClient = async (req, res) => {
   try {
-    const { name, contact, address, notes } = req.body;
+    const { name, phone, email, address, notes } = req.body;
     
     // Validate required fields
     if (!name) {
@@ -77,7 +78,8 @@ const createClient = async (req, res) => {
     // Create new client
     const client = await Client.create({
       name,
-      contact,
+      phone,
+      email,
       address,
       notes
     });
@@ -150,7 +152,7 @@ const getClientById = async (req, res) => {
 const updateClient = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, contact, address, notes } = req.body;
+    const { name, phone, email, address, notes } = req.body;
     
     // Find client
     const client = await Client.findByPk(id);
@@ -172,7 +174,8 @@ const updateClient = async (req, res) => {
     
     // Update client fields
     if (name !== undefined) client.name = name;
-    if (contact !== undefined) client.contact = contact;
+    if (phone !== undefined) client.phone = phone;
+    if (email !== undefined) client.email = email;
     if (address !== undefined) client.address = address;
     if (notes !== undefined) client.notes = notes;
     
@@ -194,9 +197,58 @@ const updateClient = async (req, res) => {
   }
 };
 
+/**
+ * Check if a phone number or email already exists in the database
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const checkDuplicate = async (req, res) => {
+  try {
+    const { phone, email } = req.query;
+    
+    if (!phone && !email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Se debe proporcionar un teléfono o correo para verificar'
+      });
+    }
+    
+    const whereClause = {};
+    
+    if (phone) {
+      whereClause.phone = phone;
+    }
+    
+    if (email) {
+      whereClause.email = email;
+    }
+    
+    const existingClient = await Client.findOne({ 
+      where: whereClause,
+      attributes: ['id', 'name', 'phone', 'email']
+    });
+    
+    return res.status(200).json({
+      success: true,
+      data: {
+        exists: !!existingClient,
+        client: existingClient
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error checking client duplicate:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al verificar la información del cliente'
+    });
+  }
+};
+
 module.exports = {
   getClients,
-  createClient,
   getClientById,
-  updateClient
+  createClient,
+  updateClient,
+  checkDuplicate
 };

@@ -15,7 +15,8 @@ const createOrder = async (req, res) => {
     const { 
       client_id,
       client_name, 
-      client_contact,
+      client_phone,
+      client_email,
       service_type, 
       problem_description, 
       accessories,
@@ -54,8 +55,8 @@ const createOrder = async (req, res) => {
       // Create new client record
       clientRecord = await Client.create({
         name: client_name,
-        contact: client_contact || null,
-        contact: client_contact || null
+        phone: client_phone || null,
+        email: client_email || null
       });
     }
 
@@ -63,7 +64,8 @@ const createOrder = async (req, res) => {
     const order = await Order.create({
       client_id: clientRecord ? clientRecord.id : null,
       client_name,
-      client_contact: client_contact || null,
+      client_phone: client_phone || null,
+      client_email: client_email || null,
       service_type,
       problem_description,
       accessories: accessories || [],
@@ -80,7 +82,8 @@ const createOrder = async (req, res) => {
           security_key: order.security_key,
           client_id: order.client_id,
           client_name: order.client_name,
-          client_contact: order.client_contact,
+          client_phone: order.client_phone,
+          client_email: order.client_email,
           service_type: order.service_type,
           problem_description: order.problem_description,
           status: order.status,
@@ -249,7 +252,8 @@ const getOrderById = async (req, res) => {
       // security_key should generally not be exposed here unless specifically needed
       // security_key: order.security_key, 
       client_name: order.client_name,
-      client_contact: order.client_contact,
+      client_phone: order.client_phone,
+      client_email: order.client_email,
       service_type: order.service_type,
       problem_description: order.problem_description,
       status: order.status,

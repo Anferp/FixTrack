@@ -6,7 +6,7 @@
  * - Sets up initial configuration
  * - Can be used to reset the database for development/testing
  */
-const { sequelize, User, Order, OrderAttachment, OrderComment, OrderUpdate } = require('../models/index');
+const { sequelize, User, Order, OrderAttachment, OrderComment, OrderUpdate, Client } = require('../models/index');
 const { hashPassword } = require('./password');
 const config = require('../config/config');
 
@@ -94,11 +94,20 @@ const createInitialData = async () => {
       });
       
       console.log('Sample users created for development');
+
+      // Create sample clients for development
+      const sampleClient = await Client.create({
+        name: 'Cliente',
+        phone: '123-456-7890',
+        email: 'cliente@example.com'
+      });
       
       // Create sample orders for development
       const sampleOrder = await Order.create({
-        client_name: 'Cliente de Prueba',
-        client_contact: 'cliente@example.com',
+        client_id: sampleClient.id,
+        client_name: sampleClient.name,
+        client_phone: sampleClient.phone,
+        client_email: sampleClient.email,
         service_type: 'equipment_repair',
         problem_description: 'Equipo no enciende correctamente',
         status: 'pending',
