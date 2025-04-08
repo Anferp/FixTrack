@@ -32,7 +32,7 @@
             <option value="in_review">En revisión</option>
             <option value="waiting_parts">Esperando repuestos</option>
             <option value="repaired">Reparado</option>
-            <option value="closed">Cerrado</option>
+            <option value="completed">Cerrado</option>
           </select>
         </div>
         

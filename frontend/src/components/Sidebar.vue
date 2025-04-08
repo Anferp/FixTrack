@@ -52,17 +52,14 @@
             <span class="material-icons">dashboard</span>
             <span class="sidebar-item-text">Dashboard</span>
           </router-link>
-          <!-- Eliminado el enlace a Órdenes Asignadas -->
-          <!-- 
           <router-link 
-            to="/technician/assigned" 
+            to="/technician/all-orders" 
             class="sidebar-item"
             active-class="active"
           >
-            <span class="material-icons">build</span>
-            <span class="sidebar-item-text">Órdenes Asignadas</span>
-          </router-link> 
-          -->
+            <span class="material-icons">list_alt</span>
+            <span class="sidebar-item-text">Todas las Órdenes</span>
+          </router-link>
         </div>
 
         <!-- Administrador -->

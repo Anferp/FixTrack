@@ -324,9 +324,243 @@ const getAssignedOrders = async (req, res) => {
   }
 };
 
+/**
+ * Get all orders (not just assigned to the technician)
+ */
+const getAllOrders = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    // If not a technician or admin, deny access
+    if (userRole !== config.roles.TECHNICIAN && userRole !== config.roles.ADMIN) {
+      return res.status(403).json({
+        success: false,
+        error: 'Acceso no autorizado'
+      });
+    }
+
+    // Pagination options
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    // Filter options
+    const whereClause = {};
+    
+    // Filter by status if provided
+    if (req.query.status) {
+      whereClause.status = req.query.status;
+    }
+    
+    // Filter by service_type if provided
+    if (req.query.service_type) {
+      whereClause.service_type = req.query.service_type;
+    }
+    
+    // Filter by search text if provided (across multiple fields)
+    if (req.query.search) {
+      const searchTerm = `%${req.query.search}%`;
+      whereClause[Op.or] = [
+        { ticket_code: { [Op.like]: searchTerm } },
+        { client_name: { [Op.like]: searchTerm } },
+        { problem_description: { [Op.like]: searchTerm } }
+      ];
+    }
+    
+    // Filter by date range if provided
+    if (req.query.start_date && req.query.end_date) {
+      whereClause.created_at = {
+        [Op.between]: [new Date(req.query.start_date), new Date(req.query.end_date + 'T23:59:59.999Z')]
+      };
+    } else if (req.query.start_date) {
+      whereClause.created_at = {
+        [Op.gte]: new Date(req.query.start_date)
+      };
+    } else if (req.query.end_date) {
+      whereClause.created_at = {
+        [Op.lte]: new Date(req.query.end_date + 'T23:59:59.999Z')
+      };
+    }
+
+    // Get orders with count for pagination
+    const { count, rows } = await Order.findAndCountAll({
+      where: whereClause,
+      limit,
+      offset,
+      order: [['created_at', 'DESC']],
+      include: [
+        {
+          model: User,
+          as: 'technician',
+          attributes: ['id', 'username']
+        }
+      ]
+    });
+
+    // Mark which orders are assigned to the current technician
+    const ordersWithAssignmentInfo = rows.map(order => {
+      const orderData = order.toJSON();
+      orderData.is_assigned_to_me = (orderData.assigned_technician_id === userId);
+      return orderData;
+    });
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        orders: ordersWithAssignmentInfo,
+        pagination: {
+          total: count,
+          page,
+          limit,
+          pages: Math.ceil(count / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching all orders:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al obtener las órdenes'
+    });
+  }
+};
+
+/**
+ * Self-assign an order to the current technician
+ */
+const selfAssignOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const technicianId = req.user.id;
+    
+    // Find the order
+    const order = await Order.findByPk(id);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: "Orden no encontrada"
+      });
+    }
+    
+    // Check if order is already assigned to a technician
+    if (order.assigned_technician_id) {
+      return res.status(400).json({
+        success: false,
+        error: "La orden ya está asignada a un técnico"
+      });
+    }
+    
+    // Check if order is already closed
+    if (order.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        error: "No se puede asignar técnico a una orden cerrada"
+      });
+    }
+    
+    // Update the order with the current technician
+    order.assigned_technician_id = technicianId;
+    
+    // If order is in pending status, update it to in_review
+    if (order.status === 'pending') {
+      order.status = 'in_review';
+    }
+    
+    await order.save();
+    
+    // Create record in order updates
+    await OrderUpdate.create({
+      order_id: order.id,
+      old_status: order.status !== 'in_review' ? order.status : 'pending',
+      new_status: order.status,
+      changed_by: technicianId,
+      change_note: `Técnico auto-asignado (ID: ${technicianId})`
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: "Orden asignada exitosamente"
+    });
+  } catch (error) {
+    console.error('Error self-assigning order:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al auto-asignar la orden'
+    });
+  }
+};
+
+/**
+ * Reassign an order from another technician to the current technician
+ */
+const reassignOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const technicianId = req.user.id;
+    
+    // Find the order
+    const order = await Order.findByPk(id);
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: "Orden no encontrada"
+      });
+    }
+    
+    // Check if order is already assigned to the current technician
+    if (order.assigned_technician_id === technicianId) {
+      return res.status(400).json({
+        success: false,
+        error: "La orden ya está asignada a ti"
+      });
+    }
+    
+    // Check if order is already closed
+    if (order.status === 'closed') {
+      return res.status(400).json({
+        success: false,
+        error: "No se puede reasignar una orden cerrada"
+      });
+    }
+    
+    // Save the old technician ID for the update log
+    const oldTechnicianId = order.assigned_technician_id;
+    
+    // Update the order with the current technician
+    order.assigned_technician_id = technicianId;
+    await order.save();
+    
+    // Create record in order updates
+    await OrderUpdate.create({
+      order_id: order.id,
+      old_status: order.status,
+      new_status: order.status,
+      changed_by: technicianId,
+      change_note: `Orden reasignada del técnico ID: ${oldTechnicianId} al técnico ID: ${technicianId}`
+    });
+    
+    return res.status(200).json({
+      success: true,
+      message: "Orden reasignada exitosamente"
+    });
+  } catch (error) {
+    console.error('Error reassigning order:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Error al reasignar la orden'
+    });
+  }
+};
+
 module.exports = {
   updateOrderStatus,
   addOrderAttachment,
   addOrderComment,
-  getAssignedOrders
+  getAssignedOrders,
+  getAllOrders,
+  selfAssignOrder,
+  reassignOrder
 };

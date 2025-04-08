@@ -121,7 +121,12 @@ const getOrders = async (req, res) => {
 
     // Add status filter if provided
     if (status) {
-      whereClause.status = status;
+      if (status === 'closed') {
+        // Si se busca 'closed', incluir también 'completed'
+        whereClause.status = { [Op.in]: ['closed', 'completed'] };
+      } else {
+        whereClause.status = status;
+      }
     }
     
     // Filter by service_type if provided

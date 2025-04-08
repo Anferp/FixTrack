@@ -138,7 +138,7 @@ const getTechnicianPerformance = async (req, res) => {
       const ordersCompleted = await Order.count({ 
         where: { 
           ...whereClause,
-          status: 'closed'
+          status: { [Op.in]: ['closed', 'completed'] }
         } 
       });
 
@@ -146,7 +146,7 @@ const getTechnicianPerformance = async (req, res) => {
       const completedOrders = await Order.findAll({
         where: { 
           ...whereClause,
-          status: 'closed',
+          status: { [Op.in]: ['closed', 'completed'] },
           closed_at: { [Op.ne]: null }
         },
         attributes: ['created_at', 'closed_at'],

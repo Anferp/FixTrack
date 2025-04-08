@@ -229,7 +229,7 @@ async function fetchStatusDistribution() {
       
       // Calcular órdenes activas y completadas
       const completedOrders = statusDistributionData.value
-        .filter(item => ['repaired', 'closed'].includes(item.status))
+        .filter(item => ['repaired', 'closed', 'completed'].includes(item.status))
         .reduce((sum, item) => sum + item.count, 0);
       
       dashboardData.value.completedOrders = completedOrders;

@@ -15,25 +15,27 @@ const props = defineProps({
 });
 
 const statusClass = computed(() => {
-  const statusMap = {
+  const classes = {
     'pending': 'status-pending',
     'in_review': 'status-in-review',
     'repaired': 'status-repaired',
     'waiting_parts': 'status-waiting-parts',
-    'closed': 'status-closed'
+    'closed': 'status-closed',
+    'completed': 'status-closed'
   };
-  return statusMap[props.status] || 'status-unknown';
+  return classes[props.status] || 'status-unknown';
 });
 
 const statusText = computed(() => {
-  const statusTextMap = {
+  const texts = {
     'pending': 'Pendiente',
     'in_review': 'En revisión',
     'repaired': 'Reparado',
     'waiting_parts': 'Esperando repuestos',
-    'closed': 'Cerrado'
+    'closed': 'Cerrado',
+    'completed': 'Cerrado'
   };
-  return statusTextMap[props.status] || 'Desconocido';
+  return texts[props.status] || 'Desconocido';
 });
 </script>
 

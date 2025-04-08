@@ -17,7 +17,7 @@
         <div class="order-header">
           <div class="order-title-section">
             <h1 class="order-title">Orden #{{ order.ticket_code }}</h1>
-            <StatusBadge :status="order.status" />
+            <StatusBadge :status="displayStatus" />
           </div>
           <div class="order-details">
             <div class="detail-item">
@@ -128,6 +128,14 @@ const serviceTypeText = computed(() => {
     'remote_assistance': 'Asistencia remota'
   };
   return types[order.value.service_type] || order.value.service_type;
+});
+
+// Mapear 'completed' a 'closed' para mostrar correctamente el estado
+const displayStatus = computed(() => {
+  if (order.value && order.value.status === 'completed') {
+    return 'closed';
+  }
+  return order.value ? order.value.status : '';
 });
 
 onMounted(() => {

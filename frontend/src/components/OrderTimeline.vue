@@ -12,11 +12,11 @@
             <div class="timeline-date">{{ formatDate(update.created_at) }}</div>
             <div class="status-change">
               <span class="old-status">
-                <StatusBadge v-if="update.old_status" :status="update.old_status" />
+                <StatusBadge v-if="update.old_status" :status="getDisplayStatus(update.old_status)" />
                 <span v-else class="initial-status">Estado inicial</span>
               </span>
               <span class="status-arrow">→</span>
-              <StatusBadge :status="update.new_status" />
+              <StatusBadge :status="getDisplayStatus(update.new_status)" />
             </div>
             <p v-if="update.change_note" class="change-note">{{ update.change_note }}</p>
           </div>
@@ -35,6 +35,14 @@ const props = defineProps({
     required: true
   }
 });
+
+// Función para mapear 'completed' a 'closed' para propósitos de visualización
+const getDisplayStatus = (status) => {
+  if (status === 'completed') {
+    return 'closed';
+  }
+  return status;
+};
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A';

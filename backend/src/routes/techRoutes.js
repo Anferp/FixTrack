@@ -63,10 +63,28 @@ router.get('/assigned-orders',
   techController.getAssignedOrders
 );
 
+// Route to get all orders (not just assigned ones)
+router.get('/all-orders', 
+  hasRole(['technician', 'admin']), 
+  techController.getAllOrders
+);
+
 // Route to update order status
 router.put('/orders/:id/status', 
   hasRole(['technician', 'admin']), 
   techController.updateOrderStatus
+);
+
+// Route to self-assign an order
+router.put('/orders/:id/self-assign', 
+  hasRole(['technician', 'admin']), 
+  techController.selfAssignOrder
+);
+
+// Route to reassign an order
+router.put('/orders/:id/reassign', 
+  hasRole(['technician', 'admin']), 
+  techController.reassignOrder
 );
 
 // Route to upload attachments to an order
