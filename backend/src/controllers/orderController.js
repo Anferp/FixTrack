@@ -164,7 +164,7 @@ const getOrders = async (req, res) => {
       order: [['created_at', 'DESC']],
       limit,
       offset,
-      attributes: ['id', 'ticket_code', 'client_name', 'service_type', 'status', 'created_at']
+      attributes: ['id', 'ticket_code', 'client_name', 'client_phone', 'client_email', 'service_type', 'problem_description', 'status', 'created_at', 'updated_at', 'accessories']
     };
 
     // Get orders with pagination

@@ -74,9 +74,9 @@ const createInitialData = async () => {
     // Create sample users for development (optional)
     if (process.env.NODE_ENV === 'development') {
       // Create a sample secretary
-      const secretaryPassword = await hashPassword('Secretary@123');
+      const secretaryPassword = await hashPassword('Secretaria@123');
       const secretary = await User.create({
-        username: 'secretary',
+        username: 'secretaria',
         password_hash: secretaryPassword,
         role: config.roles?.SECRETARY || 'secretary',
         temp_password_flag: true,
@@ -84,9 +84,9 @@ const createInitialData = async () => {
       });
       
       // Create a sample technician
-      const techPassword = await hashPassword('Technician@123');
+      const techPassword = await hashPassword('Tecnico@123');
       const technician = await User.create({
-        username: 'technician',
+        username: 'tecnico',
         password_hash: techPassword,
         role: config.roles?.TECHNICIAN || 'technician',
         temp_password_flag: true,
@@ -97,9 +97,9 @@ const createInitialData = async () => {
 
       // Create sample clients for development
       const sampleClient = await Client.create({
-        name: 'Cliente',
+        name: 'Anfer',
         phone: '123-456-7890',
-        email: 'cliente@example.com'
+        email: 'Anfer@email.com'
       });
       
       // Create sample orders for development

@@ -389,6 +389,10 @@ const getAllOrders = async (req, res) => {
       limit,
       offset,
       order: [['created_at', 'DESC']],
+      attributes: {
+        include: ['id', 'ticket_code', 'client_name', 'client_phone', 'client_email', 'service_type', 
+                 'problem_description', 'status', 'accessories', 'assigned_technician_id', 'created_at', 'updated_at']
+      },
       include: [
         {
           model: User,

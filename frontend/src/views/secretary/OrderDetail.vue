@@ -54,8 +54,12 @@
                 <span class="detail-value">{{ order.client_name }}</span>
               </div>
               <div class="detail-row">
-                <span class="detail-label">Contacto:</span>
-                <span class="detail-value">{{ order.client_contact }}</span>
+                <span class="detail-label">Teléfono:</span>
+                <span class="detail-value">{{ order.client_phone || 'No disponible' }}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Email:</span>
+                <span class="detail-value">{{ order.client_email || 'No disponible' }}</span>
               </div>
             </div>
             
