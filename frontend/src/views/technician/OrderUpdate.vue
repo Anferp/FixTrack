@@ -17,7 +17,9 @@
         <div class="order-header">
           <div class="order-title-section">
             <h1 class="order-title">Orden #{{ order.ticket_code }}</h1>
-            <StatusBadge :status="displayStatus" />
+            <div class="status-badge-container">
+              <StatusBadge :status="displayStatus" />
+            </div>
           </div>
           <div class="order-details">
             <div class="detail-item">
@@ -369,12 +371,19 @@ function formatDate(dateString) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-medium);
+  gap: 10px;
 }
 
 .order-title {
   margin: 0;
   font-size: 24px;
   color: var(--dark-gray);
+}
+
+.status-badge-container {
+  margin-left: 10px;
+  display: flex;
+  align-items: center;
 }
 
 .order-details {
