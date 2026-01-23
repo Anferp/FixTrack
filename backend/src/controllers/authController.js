@@ -1,22 +1,22 @@
 /**
- * Authentication Controller for FixTrack
- * Handles user login and password management
+ * Controlador de Autenticación para FixTrack
+ * Maneja el inicio de sesión de usuario y la gestión de contraseñas
  */
 const { User } = require('../models/index');
 const { hashPassword, verifyPassword, validatePasswordStrength } = require('../utils/password');
 const { generateToken } = require('../utils/tokens');
 
 /**
- * Authenticate a user and return a JWT token
+ * Autentica un usuario y devuelve un token JWT
  * 
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const login = async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Validate request
+    // Validar solicitud
     if (!username || !password) {
       return res.status(400).json({
         success: false,
@@ -24,7 +24,7 @@ const login = async (req, res) => {
       });
     }
 
-    // Find user by username
+    // Buscar usuario por nombre de usuario
     const user = await User.findOne({ where: { username } });
     
     if (!user) {
@@ -34,7 +34,7 @@ const login = async (req, res) => {
       });
     }
 
-    // Check if user is active
+    // Verificar si el usuario está activo
     if (!user.is_active) {
       return res.status(401).json({
         success: false,
@@ -42,7 +42,7 @@ const login = async (req, res) => {
       });
     }
 
-    // Verify password
+    // Verificar contraseña
     const isPasswordValid = await verifyPassword(password, user.password_hash);
     
     if (!isPasswordValid) {
@@ -52,10 +52,10 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate token
+    // Generar token
     const token = generateToken(user);
 
-    // Return success response with token and user data
+    // Devolver respuesta exitosa con token y datos de usuario
     return res.status(200).json({
       success: true,
       data: {
@@ -78,17 +78,17 @@ const login = async (req, res) => {
 };
 
 /**
- * Change a user's password
+ * Cambiar la contraseña de un usuario
  * 
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const changePassword = async (req, res) => {
   try {
     const { current_password, new_password, confirm_password } = req.body;
     const userId = req.user.id;
 
-    // Validate request
+    // Validar solicitud
     if (!current_password || !new_password || !confirm_password) {
       return res.status(400).json({
         success: false,
@@ -96,7 +96,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Check if new passwords match
+    // Verificar si las nuevas contraseñas coinciden
     if (new_password !== confirm_password) {
       return res.status(400).json({
         success: false,
@@ -104,7 +104,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Validate password strength
+    // Validar fortaleza de la contraseña
     const validationResult = validatePasswordStrength(new_password);
     if (!validationResult.isValid) {
       return res.status(400).json({
@@ -113,7 +113,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Get user
+    // Obtener usuario
     const user = await User.findByPk(userId);
     
     if (!user) {
@@ -123,7 +123,7 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Verify current password
+    // Verificar contraseña actual
     const isCurrentPasswordValid = await verifyPassword(current_password, user.password_hash);
     
     if (!isCurrentPasswordValid) {
@@ -141,18 +141,18 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Hash new password
+    // Hashear nueva contraseña
     const newPasswordHash = await hashPassword(new_password);
 
-    // Update user's password
+    // Actualizar contraseña del usuario
     user.password_hash = newPasswordHash;
     user.temp_password_flag = false;
     await user.save();
 
-    // Generate new token with updated temp_password_flag
+    // Generar nuevo token con temp_password_flag actualizado
     const token = generateToken(user);
 
-    // Return success response
+    // Devolver respuesta exitosa
     return res.status(200).json({
       success: true,
       message: 'Contraseña actualizada correctamente',
@@ -171,16 +171,16 @@ const changePassword = async (req, res) => {
 };
 
 /**
- * Get current authenticated user's profile
+ * Obtener perfil del usuario autenticado actual
  * 
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getProfile = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // Get user data without password
+    // Obtener datos de usuario sin contraseña
     const user = await User.findByPk(userId, {
       attributes: ['id', 'username', 'role', 'temp_password_flag', 'is_active', 'created_at']
     });

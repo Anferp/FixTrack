@@ -1,6 +1,6 @@
 /**
- * Authentication Routes for FixTrack
- * Handles authentication-related endpoints
+ * Rutas de Autenticación para FixTrack
+ * Maneja endpoints relacionados con autenticación
  */
 const express = require('express');
 const router = express.Router();
@@ -9,21 +9,21 @@ const { authenticate, requirePasswordChange } = require('../middleware/auth');
 
 /**
  * @route   POST /api/auth/login
- * @desc    Authenticate a user and get token
+ * @desc    Autenticar un usuario y obtener token
  * @access  Public
  */
 router.post('/login', authController.login);
 
 /**
  * @route   PUT /api/auth/change-password
- * @desc    Change user password
+ * @desc    Cambiar contraseña de usuario
  * @access  Private
  */
 router.put('/change-password', authenticate, authController.changePassword);
 
 /**
  * @route   GET /api/auth/profile
- * @desc    Get current user profile
+ * @desc    Obtener perfil de usuario actual
  * @access  Private
  */
 router.get('/profile', authenticate, requirePasswordChange, authController.getProfile);

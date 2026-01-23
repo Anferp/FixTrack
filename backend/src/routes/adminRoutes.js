@@ -1,32 +1,32 @@
 /**
- * Admin Routes for FixTrack System
- * Handles all routes related to user administration
+ * Rutas de Administración para el Sistema FixTrack
+ * Maneja todas las rutas relacionadas con la administración de usuarios
  */
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { authenticate, isAdmin, hasRole } = require('../middleware/auth');
 
-// Apply authentication middleware to all admin routes
+// Aplicar middleware de autenticación a todas las rutas de admin
 router.use(authenticate);
 
-// Get all users with optional filtering - accessible to admin and secretary
+// Obtener todos los usuarios con filtrado opcional - accesible para admin y secretaria
 router.get('/users', hasRole(['admin', 'secretary']), adminController.getUsers);
 
-// Apply admin-only middleware to the rest of the routes
-// Create a new user
+// Aplicar middleware solo para admin al resto de las rutas
+// Crear un nuevo usuario
 router.post('/users', isAdmin, adminController.createUser);
 
-// Get a specific user by ID
+// Obtener un usuario específico por ID
 router.get('/users/:id', isAdmin, adminController.getUserById);
 
-// Update a user's information
+// Actualizar la información de un usuario
 router.put('/users/:id', isAdmin, adminController.updateUser);
 
-// Activate or deactivate a user
+// Activar o desactivar un usuario
 router.put('/users/:id/activate', isAdmin, adminController.toggleUserActivation);
 
-// Reset a user's password
+// Restablecer la contraseña de un usuario
 router.post('/users/:id/reset-password', isAdmin, adminController.resetUserPassword);
 
 module.exports = router;

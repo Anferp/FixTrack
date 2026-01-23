@@ -1,47 +1,47 @@
 /**
- * Password utilities for FixTrack system
- * Handles hashing, verification and validation of passwords
+ * Utilidades de contraseña para el sistema FixTrack
+ * Maneja hashing, verificación y validación de contraseñas
  */
 const bcrypt = require('bcrypt');
 const config = require('../config/config');
 
-// Rounds for bcrypt (higher is more secure but slower)
+// Rondas para bcrypt (más alto es más seguro pero más lento)
 const SALT_ROUNDS = 10;
 
 /**
- * Hashes a plain text password
- * @param {string} password - The plain text password to hash
- * @returns {Promise<string>} - The hashed password
+ * Hashea una contraseña de texto plano
+ * @param {string} password - La contraseña de texto plano a hashear
+ * @returns {Promise<string>} - La contraseña hasheada
  */
 const hashPassword = async (password) => {
   return await bcrypt.hash(password, SALT_ROUNDS);
 };
 
 /**
- * Compares a plain text password against a hash
- * @param {string} password - The plain text password to check
- * @param {string} hashedPassword - The hashed password to compare against
- * @returns {Promise<boolean>} - True if the password matches, false otherwise
+ * Compara una contraseña de texto plano contra un hash
+ * @param {string} password - La contraseña de texto plano a verificar
+ * @param {string} hashedPassword - La contraseña hasheada contra la cual comparar
+ * @returns {Promise<boolean>} - Verdadero si la contraseña coincide, falso de lo contrario
  */
 const verifyPassword = async (password, hashedPassword) => {
   return await bcrypt.compare(password, hashedPassword);
 };
 
 /**
- * Checks if a password meets the requirements defined in config
- * @param {string} password - The password to validate
- * @returns {Object} - Object with isValid flag and any error messages
+ * Verifica si una contraseña cumple con los requisitos definidos en la configuración
+ * @param {string} password - La contraseña a validar
+ * @returns {Object} - Objeto con bandera isValid y cualquier mensaje de error
  */
 const validatePasswordStrength = (password) => {
   const policy = config.passwordPolicy;
   const errors = [];
 
-  // Check for minimum length
+  // Verificar longitud mínima
   if (password.length < policy.minLength) {
     errors.push(`La contraseña debe tener al menos ${policy.minLength} caracteres`);
   }
 
-  // Check for required character types
+  // Verificar tipos de caracteres requeridos
   if (policy.requireLowercase && !/[a-z]/.test(password)) {
     errors.push('La contraseña debe contener al menos una letra minúscula');
   }
@@ -65,9 +65,9 @@ const validatePasswordStrength = (password) => {
 };
 
 /**
- * Generates a random temporary password
- * @param {number} length - Length of password to generate (default: 10)
- * @returns {string} - The generated temporary password
+ * Genera una contraseña temporal aleatoria
+ * @param {number} length - Longitud de la contraseña a generar (por defecto: 10)
+ * @returns {string} - La contraseña temporal generada
  */
 const generateTemporaryPassword = (length = 10) => {
   const lowercase = 'abcdefghijklmnopqrstuvwxyz';
@@ -75,20 +75,20 @@ const generateTemporaryPassword = (length = 10) => {
   const numbers = '0123456789';
   const symbols = '!@#$%^&*()_+-=';
   
-  // Ensure one of each required character type
+  // Asegurar uno de cada tipo de carácter requerido
   let password = '';
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += symbols[Math.floor(Math.random() * symbols.length)];
   
-  // Fill the rest with random characters from all sets
+  // Completar el resto con caracteres aleatorios de todos los conjuntos
   const allChars = lowercase + uppercase + numbers + symbols;
   for (let i = 4; i < length; i++) {
     password += allChars[Math.floor(Math.random() * allChars.length)];
   }
   
-  // Shuffle the password characters
+  // Mezclar los caracteres de la contraseña
   password = password.split('').sort(() => 0.5 - Math.random()).join('');
   
   return password;

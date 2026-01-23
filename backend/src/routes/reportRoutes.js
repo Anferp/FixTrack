@@ -1,6 +1,6 @@
 /**
- * Report Routes for FixTrack System
- * Handles all routes related to reporting and dashboard functionality
+ * Rutas de Reportes para el Sistema FixTrack
+ * Maneja todas las rutas relacionadas con funcionalidad de reportes y dashboard
  */
 const express = require('express');
 const router = express.Router();
@@ -8,12 +8,12 @@ const reportController = require('../controllers/reportController');
 const { authenticate, isAdmin, hasRole } = require('../middleware/auth');
 const config = require('../config/config');
 
-// Apply authentication middleware to all report routes
+// Aplicar middleware de autenticación a todas las rutas de reportes
 router.use(authenticate);
 
 // GET /api/reports/status-distribution
-// Obtains distribution of orders by status
-// Accessible by admin and secretary
+// Obtiene distribución de órdenes por estado
+// Accesible por admin y secretaria
 router.get(
   '/status-distribution', 
   hasRole([config.roles.ADMIN, config.roles.SECRETARY]), 
@@ -21,8 +21,8 @@ router.get(
 );
 
 // GET /api/reports/technician-performance
-// Obtains performance metrics for technicians
-// Accessible only by admin
+// Obtiene métricas de rendimiento para técnicos
+// Accesible solo por admin
 router.get(
   '/technician-performance', 
   isAdmin, 
@@ -30,8 +30,8 @@ router.get(
 );
 
 // GET /api/reports/common-problems
-// Obtains analysis of most common problems reported
-// Accessible only by admin
+// Obtiene análisis de problemas más comunes reportados
+// Accesible solo por admin
 router.get(
   '/common-problems', 
   isAdmin, 
@@ -39,8 +39,8 @@ router.get(
 );
 
 // GET /api/reports/export-orders
-// Exports orders as Excel or PDF
-// Accessible by admin and secretary
+// Exporta órdenes como Excel o PDF
+// Accesible por admin y secretaria
 router.get(
   '/export-orders', 
   hasRole([config.roles.ADMIN, config.roles.SECRETARY]), 

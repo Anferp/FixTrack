@@ -1,7 +1,7 @@
 /**
- * FixTrack - Main Server Entry Point
- * This is the main application file that sets up the Express server
- * and connects all middleware and routes.
+ * FixTrack - Punto de entrada principal del servidor
+ * Este es el archivo principal de la aplicación que configura el servidor Express
+ * y conecta todos los middleware y rutas.
  */
 const express = require('express');
 const cors = require('cors');
@@ -9,22 +9,22 @@ const path = require('path');
 const dotenv = require('dotenv');
 const multer = require('multer');
 
-// Load environment variables
+// Cargar variables de entorno
 dotenv.config();
 
-// Import database connection to ensure it's initialized
+// Importar conexión a base de datos para asegurar su inicialización
 const sequelize = require('./config/database');
 
-// Import routes
+// Importar rutas
 const routes = require('./routes/index');
 
-// Import configuration
+// Importar configuración
 const config = require('./config/config');
 
-// Create Express app
+// Crear aplicación Express
 const app = express();
 
-// Configure multer for file uploads
+// Configurar multer para subida de archivos
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, path.join(__dirname, 'public/uploads'));
@@ -36,16 +36,16 @@ const storage = multer.diskStorage({
   }
 });
 
-// Apply middleware
+// Aplicar middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Use routes with API prefix
+// Usar rutas con prefijo API
 app.use('/api', routes);
 
-// Error handling middleware
+// Middleware de manejo de errores
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
@@ -55,7 +55,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Set port and start server
+// Configurar puerto e iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`===========================================`);
@@ -63,9 +63,9 @@ app.listen(PORT, () => {
   console.log(`===========================================`);
 });
 
-// Handle unhandled promise rejections
+// Manejar rechazos de promesas no controlados
 process.on('unhandledRejection', (err) => {
   console.error('UNHANDLED PROMISE REJECTION:', err);
 });
 
-module.exports = app; // Export for testing
+module.exports = app; // Exportar para pruebas

@@ -1,6 +1,6 @@
 /**
- * Central index file for exporting models and setting up associations
- * Acts as a single point of import for all models
+ * Archivo central de índice para exportar modelos y configurar asociaciones
+ * Actúa como punto único de importación para todos los modelos
  */
 const sequelize = require('../config/database');
 const User = require('./User');
@@ -10,12 +10,12 @@ const OrderAttachment = require('./OrderAttachment');
 const OrderComment = require('./OrderComment');
 const OrderUpdate = require('./OrderUpdate');
 
-// NOTE: Primary associations are already set up in individual model files
-// This file primarily serves as a centralized export point and ensures
-// all model files are loaded properly
+// NOTAS: Las asociaciones principales ya están configuradas en los archivos de modelo individuales
+// Este archivo sirve principalmente como punto de exportación centralizado y asegura
+// que todos los archivos de modelo se carguen correctamente
 
-// Make sure all models are synchronized with the database structure
-// In a production environment, migrations would be used instead
+// Asegurar que todos los modelos estén sincronizados con la estructura de la base de datos
+// En un entorno de producción, se usarían migraciones en su lugar
 const syncModels = async (force = false) => {
   try {
     await sequelize.sync({ force });
@@ -26,10 +26,10 @@ const syncModels = async (force = false) => {
   }
 };
 
-// Additional associations can be added here if needed
-// (Most are already defined in their respective model files)
+// Se pueden agregar asociaciones adicionales aquí si es necesario
+// (La mayoría ya están definidas en sus respectivos archivos de modelo)
 
-// Export all models and utility functions
+// Exportar todos los modelos y funciones de utilidad
 module.exports = {
   sequelize,
   User,

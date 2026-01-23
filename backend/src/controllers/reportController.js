@@ -1,6 +1,6 @@
 /**
- * Report Controller
- * Handles generation of reports and statistics for the dashboard
+ * Controlador de Reportes
+ * Maneja la generación de reportes y estadísticas para el dashboard
  */
 const { Op } = require('sequelize');
 const { Order, User, OrderComment, sequelize } = require('../models/index');
@@ -9,15 +9,15 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 
 /**
- * Get distribution of orders by status
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener distribución de órdenes por estado
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getStatusDistribution = async (req, res) => {
   try {
-    const { start_date, end_date, service_type, search } = req.query; // Add service_type and search
+    const { start_date, end_date, service_type, search } = req.query; // Agregar service_type y búsqueda
     
-    // Build filters
+    // Construir filtros
     const whereClause = {};
     if (start_date || end_date) {
       whereClause.created_at = {};
@@ -29,12 +29,12 @@ const getStatusDistribution = async (req, res) => {
       }
     }
     
-    // Add service_type filter
+    // Agregar filtro de service_type
     if (service_type) {
       whereClause.service_type = service_type;
     }
     
-    // Add search filter
+    // Agregar filtro de búsqueda
     if (search) {
       const searchTerm = `%${search}%`;
       whereClause[Op.or] = [
@@ -44,7 +44,7 @@ const getStatusDistribution = async (req, res) => {
       ];
     }
 
-    // Get count of orders grouped by status
+    // Obtener conteo de órdenes agrupadas por estado
     const statusCounts = await Order.findAll({
       where: whereClause,
       attributes: [
@@ -55,10 +55,10 @@ const getStatusDistribution = async (req, res) => {
       raw: true
     });
 
-    // Calculate total orders for percentage
+    // Calcular total de órdenes para porcentaje
     const totalOrders = statusCounts.reduce((sum, item) => sum + parseInt(item.count), 0);
 
-    // Format the response with percentages
+    // Formatear la respuesta con porcentajes
     const distribution = statusCounts.map(item => ({
       status: item.status,
       count: parseInt(item.count),
@@ -82,15 +82,15 @@ const getStatusDistribution = async (req, res) => {
 };
 
 /**
- * Get performance metrics for technicians
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener métricas de rendimiento para técnicos
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getTechnicianPerformance = async (req, res) => {
   try {
-    const { start_date, end_date, service_type, search } = req.query; // Add service_type and search
+    const { start_date, end_date, service_type, search } = req.query; // Agregar service_type y búsqueda
     
-    // Find all technicians
+    // Buscar todos los técnicos
     const technicians = await User.findAll({
       where: { 
         role: config.roles.TECHNICIAN,
@@ -102,9 +102,9 @@ const getTechnicianPerformance = async (req, res) => {
 
     const technicianStats = [];
 
-    // For each technician, calculate stats
+    // Para cada técnico, calcular estadísticas
     for (const tech of technicians) {
-      // Build date filters
+      // Construir filtros de fecha
       const whereClause = { assigned_technician_id: tech.id };
       if (start_date || end_date) {
         whereClause.created_at = {};
@@ -116,12 +116,12 @@ const getTechnicianPerformance = async (req, res) => {
         }
       }
       
-      // Add service_type filter
+      // Agregar filtro de service_type
       if (service_type) {
         whereClause.service_type = service_type;
       }
       
-      // Add search filter
+      // Agregar filtro de búsqueda
       if (search) {
         const searchTerm = `%${search}%`;
         whereClause[Op.or] = [
@@ -131,10 +131,10 @@ const getTechnicianPerformance = async (req, res) => {
         ];
       }
 
-      // Get assigned orders count
+      // Obtener conteo de órdenes asignadas
       const ordersAssigned = await Order.count({ where: whereClause });
       
-      // Get completed orders count (add status filter to the base whereClause)
+      // Obtener conteo de órdenes completadas (agregar filtro de estado a la whereClause base)
       const ordersCompleted = await Order.count({ 
         where: { 
           ...whereClause,
@@ -142,7 +142,7 @@ const getTechnicianPerformance = async (req, res) => {
         } 
       });
 
-      // Calculate average resolution time (for completed orders)
+      // Calcular tiempo promedio de resolución (para órdenes completadas)
       const completedOrders = await Order.findAll({
         where: { 
           ...whereClause,
@@ -157,7 +157,7 @@ const getTechnicianPerformance = async (req, res) => {
       for (const order of completedOrders) {
         const createdDate = new Date(order.created_at);
         const closedDate = new Date(order.closed_at);
-        const resolutionTime = (closedDate - createdDate) / (1000 * 60 * 60 * 24); // in days
+        const resolutionTime = (closedDate - createdDate) / (1000 * 60 * 60 * 24); // en días
         totalResolutionTime += resolutionTime;
       }
 
@@ -165,7 +165,7 @@ const getTechnicianPerformance = async (req, res) => {
         ? parseFloat((totalResolutionTime / completedOrders.length).toFixed(1)) 
         : 0;
 
-      // Calculate completion rate
+      // Calcular tasa de finalización
       const completionRate = ordersAssigned > 0 
         ? parseFloat(((ordersCompleted / ordersAssigned) * 100).toFixed(1)) 
         : 0;
@@ -196,15 +196,15 @@ const getTechnicianPerformance = async (req, res) => {
 };
 
 /**
- * Get analysis of most common problems reported
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener análisis de problemas comunes reportados
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getCommonProblems = async (req, res) => {
   try {
-    const { start_date, end_date, service_type, search, limit = 10 } = req.query; // Add service_type and search
+    const { start_date, end_date, service_type, search, limit = 10 } = req.query; // Agregar service_type y búsqueda
     
-    // Build filters
+    // Construir filtros
     const whereClause = {};
     if (start_date || end_date) {
       whereClause.created_at = {};
@@ -216,12 +216,12 @@ const getCommonProblems = async (req, res) => {
       }
     }
     
-    // Add service_type filter
+    // Agregar filtro de service_type
     if (service_type) {
       whereClause.service_type = service_type;
     }
     
-    // Add search filter
+    // Agregar filtro de búsqueda
     if (search) {
       const searchTerm = `%${search}%`;
       whereClause[Op.or] = [
@@ -231,14 +231,14 @@ const getCommonProblems = async (req, res) => {
       ];
     }
 
-    // Get all order descriptions for analysis
+    // Obtener todas las descripciones de órdenes para análisis
     const orders = await Order.findAll({
       where: whereClause,
       attributes: ['problem_description'],
       raw: true
     });
 
-    // Simple keyword extraction and counting
+    // Extracción simple de palabras clave y conteo
     const keywordMap = {};
     const commonKeywords = [
       'no enciende', 'pantalla', 'lento', 'virus', 'batería', 'error', 
@@ -246,7 +246,7 @@ const getCommonProblems = async (req, res) => {
       'mouse', 'carga', 'memoria', 'disco', 'software', 'hardware', 'red'
     ];
 
-    // Count occurrences of common keywords in problem descriptions
+    // Contar apariciones de palabras clave comunes en descripciones de problemas
     orders.forEach(order => {
       const description = order.problem_description.toLowerCase();
       commonKeywords.forEach(keyword => {
@@ -256,13 +256,13 @@ const getCommonProblems = async (req, res) => {
       });
     });
 
-    // Convert to array and sort by count
+    // Convertir a array y ordenar por conteo
     const keywordArray = Object.entries(keywordMap)
       .map(([keyword, count]) => ({ keyword, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, parseInt(limit));
 
-    // Calculate percentages
+    // Calcular porcentajes
     const totalAnalyzed = orders.length;
     const problems = keywordArray.map(item => ({
       keyword: item.keyword,
@@ -287,15 +287,15 @@ const getCommonProblems = async (req, res) => {
 };
 
 /**
- * Export orders as Excel or PDF
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Exportar órdenes como Excel o PDF
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const exportOrders = async (req, res) => {
   try {
-    const { format = 'excel', start_date, end_date, status, service_type, search, technician_id } = req.query; // Add service_type and search
+    const { format = 'excel', start_date, end_date, status, service_type, search, technician_id } = req.query; // Agregar service_type y búsqueda
     
-    // Validate format
+    // Validar formato
     if (format !== 'excel' && format !== 'pdf') {
       return res.status(400).json({
         success: false,
@@ -303,7 +303,7 @@ const exportOrders = async (req, res) => {
       });
     }
 
-    // Build filters
+    // Construir filtros
     const whereClause = {};
     if (start_date || end_date) {
       whereClause.created_at = {};
@@ -323,12 +323,12 @@ const exportOrders = async (req, res) => {
       whereClause.assigned_technician_id = technician_id;
     }
     
-    // Add service_type filter
+    // Agregar filtro de service_type
     if (service_type) {
       whereClause.service_type = service_type;
     }
     
-    // Add search filter
+    // Agregar filtro de búsqueda
     if (search) {
       const searchTerm = `%${search}%`;
       whereClause[Op.or] = [
@@ -338,7 +338,7 @@ const exportOrders = async (req, res) => {
       ];
     }
 
-    // Get orders with technician details
+    // Obtener órdenes con detalles de técnico
     const orders = await Order.findAll({
       where: whereClause,
       include: [
@@ -356,16 +356,16 @@ const exportOrders = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    // Format the date for the filename
+    // Formatear la fecha para el nombre de archivo
     const today = new Date();
     const dateString = `${today.getFullYear()}${(today.getMonth()+1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
     
     if (format === 'excel') {
-      // Create Excel workbook
+      // Crear libro de Excel
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Órdenes de Servicio');
       
-      // Define columns
+      // Definir columnas
       worksheet.columns = [
         { header: 'Código', key: 'ticket_code', width: 15 },
         { header: 'Cliente', key: 'client_name', width: 25 },
@@ -379,7 +379,7 @@ const exportOrders = async (req, res) => {
         { header: 'Problema', key: 'problem_description', width: 40 }
       ];
       
-      // Add data rows
+      // Agregar filas de datos
       orders.forEach(order => {
         worksheet.addRow({
           ticket_code: order.ticket_code,
@@ -395,42 +395,42 @@ const exportOrders = async (req, res) => {
         });
       });
       
-      // Style the header row
+      // Estilizar la fila de encabezado
       worksheet.getRow(1).font = { bold: true };
       
-      // Set content type and disposition
+      // Establecer tipo de contenido y disposición
       res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
       res.setHeader('Content-Disposition', `attachment; filename="orders_report_${dateString}.xlsx"`);
       
-      // Write to response
+      // Escribir en la respuesta
       await workbook.xlsx.write(res);
       res.end();
     } else if (format === 'pdf') {
-      // Create PDF document
+      // Crear documento PDF
       const doc = new PDFDocument({
         margin: 50,
         size: 'A4',
         layout: 'landscape'
       });
       
-      // Set headers for download
+      // Establecer encabezados para descarga
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="orders_report_${dateString}.pdf"`);
       
-      // Pipe the PDF to the response
+      // Enviar el PDF a la respuesta mediante pipe
       doc.pipe(res);
       
-      // Add title
+      // Agregar título
       doc.fontSize(16).text('Reporte de Órdenes de Servicio', { align: 'center' });
       doc.moveDown();
       
-      // Define table layout
+      // Definir diseño de tabla
       const tableTop = 100;
       const tableLeft = 50;
       const rowHeight = 30;
       const colWidths = [80, 100, 80, 80, 80, 80, 120];
       
-      // Draw header row
+      // Dibujar fila de encabezado
       doc.fontSize(10).font('Helvetica-Bold');
       let currentLeft = tableLeft;
       
@@ -439,19 +439,19 @@ const exportOrders = async (req, res) => {
         currentLeft += colWidths[i];
       });
       
-      // Draw rows
+      // Dibujar filas
       doc.font('Helvetica');
       let currentTop = tableTop + rowHeight;
       
       orders.slice(0, 15).forEach((order, rowIndex) => {
         currentLeft = tableLeft;
         
-        // Add page if needed
+        // Agregar página si es necesario
         if (currentTop > 500) {
           doc.addPage();
           currentTop = 100;
           
-          // Redraw header
+          // Redibujar encabezado
           doc.fontSize(10).font('Helvetica-Bold');
           currentLeft = tableLeft;
           ['Código', 'Cliente', 'Tipo', 'Estado', 'Técnico', 'Creado', 'Problema'].forEach((header, i) => {
@@ -463,7 +463,7 @@ const exportOrders = async (req, res) => {
           currentLeft = tableLeft;
         }
         
-        // Draw row data
+        // Dibujar datos de fila
         doc.text(order.ticket_code, currentLeft, currentTop, { width: colWidths[0] });
         currentLeft += colWidths[0];
         
@@ -492,13 +492,13 @@ const exportOrders = async (req, res) => {
         currentTop += rowHeight;
       });
       
-      // Note if there are more orders than shown
+      // Nota si hay más órdenes de las mostradas
       if (orders.length > 15) {
         doc.moveDown();
         doc.text(`... y ${orders.length - 15} órdenes más. Exportar a Excel para ver todas.`, { align: 'center' });
       }
       
-      // Add footer with date
+      // Agregar pie de página con fecha
       doc.fontSize(8).text(
         `Reporte generado el ${formatDate(new Date())}`, 
         50, 
@@ -506,12 +506,12 @@ const exportOrders = async (req, res) => {
         { align: 'center' }
       );
       
-      // Finalize and end response
+      // Finalizar y terminar respuesta
       doc.end();
     }
   } catch (error) {
     console.error('Error exporting orders:', error);
-    // If headers were already sent, we can't send JSON response
+    // Si los encabezados ya fueron enviados, no podemos enviar respuesta JSON
     if (!res.headersSent) {
       res.status(500).json({
         success: false,
@@ -524,7 +524,7 @@ const exportOrders = async (req, res) => {
 };
 
 /**
- * Helper function to translate status codes to Spanish
+ * Función auxiliar para traducir códigos de estado a español
  * @param {string} status - Status code
  * @returns {string} - Translated status
  */
@@ -540,7 +540,7 @@ function translateStatus(status) {
 }
 
 /**
- * Helper function to format dates
+ * Función auxiliar para formatear fechas
  * @param {Date} date - Date to format
  * @returns {string} - Formatted date
  */

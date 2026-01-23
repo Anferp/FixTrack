@@ -1,14 +1,14 @@
 /**
- * Order Controller
- * Handles CRUD operations for orders management by secretaries
+ * Controlador de Órdenes
+ * Maneja operaciones CRUD para la gestión de órdenes por secretarias
  */
-const { Order, User, OrderComment, OrderUpdate, OrderAttachment, Client, sequelize } = require('../models'); // Import sequelize if not already
-const { Op } = require('sequelize'); // Import Op for complex queries
+const { Order, User, OrderComment, OrderUpdate, OrderAttachment, Client, sequelize } = require('../models'); // Importar sequelize si no está ya
+const { Op } = require('sequelize'); // Importar Op para consultas complejas
 
 /**
- * Create a new service order
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Crear una nueva orden de servicio
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const createOrder = async (req, res) => {
   try {
@@ -25,7 +25,7 @@ const createOrder = async (req, res) => {
 
     let clientRecord = null;
     
-    // Validate required fields
+    // Validar campos requeridos
     if (!client_name || !service_type || !problem_description) {
       return res.status(400).json({
         success: false,
@@ -33,7 +33,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Validate service type
+    // Validar tipo de servicio
     if (!['equipment_repair', 'remote_assistance'].includes(service_type)) {
       return res.status(400).json({
         success: false,
@@ -41,9 +41,9 @@ const createOrder = async (req, res) => {
       });
     }
     
-    // Handle client creation or selection
+    // Manejar la creación o selección del cliente
     if (client_id) {
-      // Use existing client
+      // Usar cliente existente
       clientRecord = await Client.findByPk(client_id);
       if (!clientRecord) {
         return res.status(404).json({
@@ -52,7 +52,7 @@ const createOrder = async (req, res) => {
         });
       }
     } else if (create_client === true) {
-      // Create new client record
+      // Crear nuevo registro de cliente
       clientRecord = await Client.create({
         name: client_name,
         phone: client_phone || null,
@@ -60,7 +60,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Create new order
+    // Crear nueva orden
     const order = await Order.create({
       client_id: clientRecord ? clientRecord.id : null,
       client_name,
@@ -105,9 +105,9 @@ const createOrder = async (req, res) => {
 };
 
 /**
- * Get all orders with optional filtering by status
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener todas las órdenes con filtrado opcional por estado
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getOrders = async (req, res) => {
   try {
@@ -116,25 +116,25 @@ const getOrders = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const offset = (page - 1) * limit;
 
-    // Build query conditions
-    const whereClause = {}; // Use a separate whereClause object
+    // Construir condiciones de consulta
+    const whereClause = {}; // Usar un objeto whereClause separado
 
-    // Add status filter if provided
+    // Agregar filtro de estado si se proporciona
     if (status) {
       if (status === 'closed') {
-        // Si se busca 'closed', incluir también 'completed'
+        // En caso de buscar 'closed', incluir también 'completed'
         whereClause.status = { [Op.in]: ['closed', 'completed'] };
       } else {
         whereClause.status = status;
       }
     }
     
-    // Filter by service_type if provided
+    // Filtrar por service_type si se proporciona
     if (service_type) {
       whereClause.service_type = service_type;
     }
     
-    // Filter by search text if provided (across multiple fields)
+    // Filtrar por texto de búsqueda si se proporciona (a través de múltiples campos)
     if (search) {
       const searchTerm = `%${search}%`;
       whereClause[Op.or] = [
@@ -144,7 +144,7 @@ const getOrders = async (req, res) => {
       ];
     }
     
-    // Filter by date range if provided
+    // Filtrar por rango de fecha si se proporciona
     if (start_date && end_date) {
       whereClause.created_at = {
         [Op.between]: [new Date(start_date), new Date(end_date + 'T23:59:59.999Z')]
@@ -160,17 +160,17 @@ const getOrders = async (req, res) => {
     }
 
     const queryOptions = {
-      where: whereClause, // Apply the built whereClause
+      where: whereClause, // Aplicar el whereClause construido
       order: [['created_at', 'DESC']],
       limit,
       offset,
       attributes: ['id', 'ticket_code', 'client_name', 'client_phone', 'client_email', 'service_type', 'problem_description', 'status', 'created_at', 'updated_at', 'accessories']
     };
 
-    // Get orders with pagination
+    // Obtener órdenes con paginación
     const { count, rows: orders } = await Order.findAndCountAll(queryOptions);
 
-    // Calculate pagination info
+    // Calcular información de paginación
     const totalPages = Math.ceil(count / limit);
 
     return res.status(200).json({
@@ -196,9 +196,9 @@ const getOrders = async (req, res) => {
 };
 
 /**
- * Get details of a specific order by ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener detalles de una orden específica por ID
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getOrderById = async (req, res) => {
   try {
@@ -218,15 +218,15 @@ const getOrderById = async (req, res) => {
         },
         {
           model: OrderComment,
-          as: 'comments' // Assuming 'comments' is the correct alias for OrderComment association
+          as: 'comments' // Asumiendo que 'comments' es el alias correcto para la asociación OrderComment
         },
         {
           model: OrderUpdate,
-          as: 'statusUpdates' // Corrected alias based on error message
+          as: 'statusUpdates' // Alias corregido basado en mensaje de error
         },
         {
           model: OrderAttachment,
-          as: 'attachments' // Assuming 'attachments' is the correct alias for OrderAttachment association
+          as: 'attachments' // Asumiendo que 'attachments' es el alias correcto para la asociación OrderAttachment
         }
       ]
     });
@@ -238,9 +238,9 @@ const getOrderById = async (req, res) => {
       });
     }
 
-    // Check if user is authorized to see this order
-    // Note: This check might need adjustment depending on exact requirements
-    // Currently allows admin, secretary, and the assigned technician
+    // Verificar si el usuario está autorizado para ver esta orden
+    // Nota: Esta verificación podría necesitar ajustes dependiendo de los requisitos exactos
+    // Actualmente permite admin, secretaria y el técnico asignado
     if (req.user.role !== 'admin' && 
         req.user.role !== 'secretary' && 
         (req.user.role !== 'technician' || req.user.id !== order.assigned_technician_id)) {
@@ -250,11 +250,11 @@ const getOrderById = async (req, res) => {
       });
     }
 
-    // Format response data for better readability
+    // Formatear datos de respuesta para mejor legibilidad
     const orderData = {
       id: order.id,
       ticket_code: order.ticket_code,
-      // security_key should generally not be exposed here unless specifically needed
+      // security_key generalmente no debería expuesto aquí a menos que sea específicamente necesario
       // security_key: order.security_key, 
       client_name: order.client_name,
       client_phone: order.client_phone,
@@ -264,15 +264,15 @@ const getOrderById = async (req, res) => {
       status: order.status,
       accessories: order.accessories,
       assigned_technician_id: order.assigned_technician_id,
-      assigned_technician: order.technician ? order.technician.username : null, // Use the alias 'technician'
+      assigned_technician: order.technician ? order.technician.username : null, // Usar el alias 'technician'
       created_by: order.created_by,
-      created_by_user: order.creator ? order.creator.username : null, // Use the alias 'creator'
+      created_by_user: order.creator ? order.creator.username : null, // Usar el alias 'creator'
       created_at: order.createdAt,
       updated_at: order.updatedAt,
       closed_at: order.closed_at,
-      comments: order.comments || [], // Use the alias 'comments'
-      updates: order.statusUpdates || [], // Corrected to use 'statusUpdates' from include
-      attachments: order.attachments || [] // Use the alias 'attachments'
+      comments: order.comments || [], // Usar el alias 'comments'
+      updates: order.statusUpdates || [], // Corregido para usar 'statusUpdates' desde include
+      attachments: order.attachments || [] // Usar el alias 'attachments'
     };
 
     return res.status(200).json({
@@ -283,7 +283,7 @@ const getOrderById = async (req, res) => {
     });
 
   } catch (error) {
-    // Log the specific Sequelize error if available
+    // Registrar el error específico de Sequelize si está disponible
     if (error.name === 'SequelizeEagerLoadingError') {
       console.error("Eager loading error in getOrderById:", error.message);
     } else {
@@ -297,9 +297,9 @@ const getOrderById = async (req, res) => {
 };
 
 /**
- * Assign a technician to an order
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Asignar un técnico a una orden
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const assignTechnician = async (req, res) => {
   try {
@@ -313,7 +313,7 @@ const assignTechnician = async (req, res) => {
       });
     }
 
-    // Check if technician exists and has technician role
+    // Verificar si el técnico existe y tiene rol de técnico
     const technician = await User.findOne({
       where: {
         id: technician_id,
@@ -329,7 +329,7 @@ const assignTechnician = async (req, res) => {
       });
     }
 
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
 
     if (!order) {
@@ -339,7 +339,7 @@ const assignTechnician = async (req, res) => {
       });
     }
 
-    // Check if order is already closed
+    // Verificar si la orden ya está cerrada
     if (order.status === 'closed') {
       return res.status(400).json({
         success: false,
@@ -347,19 +347,19 @@ const assignTechnician = async (req, res) => {
       });
     }
 
-    // Save old technician id for update log
+    // Guardar ID de técnico anterior para registro de actualización
     const oldTechnicianId = order.assigned_technician_id;
 
-    // Update the order with new technician
+    // Actualizar la orden con el nuevo técnico
     order.assigned_technician_id = technician_id;
     await order.save();
 
-    // Create record in order updates if technician changed
+    // Crear registro en actualizaciones de orden si el técnico cambió
     if (oldTechnicianId !== technician_id) {
-      // Assuming OrderUpdate model has a method or direct create works
+      // Asumiendo que el modelo OrderUpdate tiene un método o create directo funciona
       await OrderUpdate.create({
         order_id: order.id,
-        // Assuming status doesn't change on assignment, use current status
+        // Asumiendo que el estado no cambia en la asignación, usar estado actual
         old_status: order.status, 
         new_status: order.status, 
         changed_by: req.user.id,
@@ -374,7 +374,7 @@ const assignTechnician = async (req, res) => {
           id: order.id,
           status: order.status,
           assigned_technician_id: order.assigned_technician_id,
-          assigned_technician: technician.username, // Return username for convenience
+          assigned_technician: technician.username, // Devolver nombre de usuario por conveniencia
           updated_at: order.updatedAt
         }
       }
@@ -390,16 +390,16 @@ const assignTechnician = async (req, res) => {
 };
 
 /**
- * Close an order
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Cerrar una orden
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const closeOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const { closing_notes } = req.body;
 
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
 
     if (!order) {
@@ -409,7 +409,7 @@ const closeOrder = async (req, res) => {
       });
     }
 
-    // Check if order already closed
+    // Verificar si la orden ya está cerrada
     if (order.status === 'closed') {
       return res.status(400).json({
         success: false,
@@ -417,7 +417,7 @@ const closeOrder = async (req, res) => {
       });
     }
 
-    // Check if order has assigned technician - Removed based on potential workflow flexibility
+    // Verificar si la orden tiene técnico asignado - Eliminado por posible flexibilidad de flujo de trabajo
     // if (!order.isAssigned()) {
     //   return res.status(400).json({
     //     success: false,
@@ -425,16 +425,16 @@ const closeOrder = async (req, res) => {
     //   });
     // }
 
-    // Store old status for update log
+    // Almacenar estado anterior para registro de actualización
     const oldStatus = order.status;
     
-    // Close the order - using 'completed' status which is likely valid
+    // Cerrar la orden - usando estado 'completed' que probablemente es válido
     order.status = 'completed';
     order.closed_at = new Date();
     await order.save();
 
-    // Create status update record using the static method if available
-    // Assuming OrderUpdate.createStatusUpdate exists as per the reference file summary
+    // Crear registro de actualización de estado usando el método estático si está disponible
+    // Asumiendo que OrderUpdate.createStatusUpdate existe según el resumen del archivo de referencia
     await OrderUpdate.createStatusUpdate(
       order.id,
       oldStatus,
@@ -443,12 +443,12 @@ const closeOrder = async (req, res) => {
       closing_notes || 'Orden cerrada por secretaría'
     );
 
-    // Add closing note as a comment if provided
+    // Agregar nota de cierre como comentario si se proporciona
     if (closing_notes) {
       await OrderComment.create({
         order_id: order.id,
         user_id: req.user.id,
-        comment_type: 'status_update', // Or 'client' depending on visibility needs
+        comment_type: 'status_update', // O 'client' dependiendo de las necesidades de visibilidad
         content: `Orden cerrada: ${closing_notes}`
       });
     }
@@ -475,16 +475,16 @@ const closeOrder = async (req, res) => {
 };
 
 /**
- * Add a comment to an order (client or technical)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Agregar un comentario a una orden (client o technical)
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const addComment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { content, comment_type } = req.body; // Expect 'client' or 'technical'
+    const { content, comment_type } = req.body; // Espera 'client' o 'technical'
 
-    // Validate inputs
+    // Validar entradas
     if (!content) {
       return res.status(400).json({
         success: false,
@@ -492,13 +492,13 @@ const addComment = async (req, res) => {
       });
     }
 
-    // Determine comment type - default to 'client' if not specified or invalid
+    // Determinar tipo de comentario - por defecto 'client' si no se especifica o es inválido
     let finalCommentType = 'client';
     if (comment_type && ['client', 'technical', 'status_update'].includes(comment_type)) {
       finalCommentType = comment_type;
     }
 
-    // Check if order exists
+    // Verificar si la orden existe
     const order = await Order.findByPk(id);
     if (!order) {
       return res.status(404).json({
@@ -507,8 +507,8 @@ const addComment = async (req, res) => {
       });
     }
 
-    // Permission check: Only technicians and admins can add 'technical' comments
-    // Secretaries and admins can add 'client' or 'status_update' comments
+    // Verificación de permisos: Solo técnicos y admins pueden agregar comentarios 'technical'
+    // Secretarias y admins pueden agregar comentarios 'client' o 'status_update'
     if (finalCommentType === 'technical' && 
         req.user.role !== 'technician' && 
         req.user.role !== 'admin') {
@@ -518,7 +518,7 @@ const addComment = async (req, res) => {
       });
     }
     
-    // Assuming secretaries should only add 'client' or 'status_update' comments via this endpoint
+    // Asumiendo que secretarias solo deberían agregar comentarios 'client' o 'status_update' a través de este endpoint
     if (req.user.role === 'secretary' && finalCommentType === 'technical') {
        return res.status(403).json({
         success: false,
@@ -527,7 +527,7 @@ const addComment = async (req, res) => {
     }
 
 
-    // Create the comment
+    // Crear el comentario
     const comment = await OrderComment.create({
       order_id: id,
       user_id: req.user.id,
@@ -535,7 +535,7 @@ const addComment = async (req, res) => {
       content
     });
 
-    // Return the new comment
+    // Devolver el nuevo comentario
     return res.status(201).json({
       success: true,
       data: {
@@ -560,9 +560,9 @@ const addComment = async (req, res) => {
 };
 
 /**
- * Update an order
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Actualizar una orden
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const updateOrder = async (req, res) => {
   try {
@@ -578,7 +578,7 @@ const updateOrder = async (req, res) => {
       status
     } = req.body;
 
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
 
     if (!order) {
@@ -588,7 +588,7 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    // Check if user is authorized to update this order
+    // Verificar si el usuario está autorizado para actualizar esta orden
     if (req.user.role !== 'admin' && req.user.role !== 'secretary') {
       return res.status(403).json({
         success: false,
@@ -596,7 +596,7 @@ const updateOrder = async (req, res) => {
       });
     }
 
-    // Update order fields
+    // Actualizar campos de la orden
     if (client_id && (client_name || client_phone || client_email)) {
       // Buscar el cliente asociado
       const client = await Client.findByPk(client_id);

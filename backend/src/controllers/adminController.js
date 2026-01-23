@@ -1,22 +1,22 @@
 /**
- * Admin Controller
- * Handles all admin-specific operations for user management
+ * Controlador de Administración
+ * Maneja todas las operaciones específicas de administrador para gestión de usuarios
  */
-const { User, sequelize } = require('../models/index'); // Import sequelize if not already
-const { Op } = require('sequelize'); // Import Op for complex queries
+const { User, sequelize } = require('../models/index'); // Importar sequelize si no está ya
+const { Op } = require('sequelize'); // Importar Op para consultas complejas
 const { hashPassword, validatePasswordStrength, generateTemporaryPassword } = require('../utils/password');
 const config = require('../config/config');
 
 /**
- * Create a new user
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Crear un nuevo usuario
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const createUser = async (req, res) => {
   try {
     const { username, password, role } = req.body;
 
-    // Validate input
+    // Validar entrada
     if (!username || !password || !role) {
       return res.status(400).json({
         success: false,
@@ -24,7 +24,7 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Validate role
+    // Validar rol
     if (!Object.values(config.roles).includes(role)) {
       return res.status(400).json({
         success: false,
@@ -32,7 +32,7 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Check if username already exists
+    // Verificar si el nombre de usuario ya existe
     const existingUser = await User.findOne({ where: { username } });
     if (existingUser) {
       return res.status(400).json({
@@ -41,7 +41,7 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Validate password strength
+    // Validar fortaleza de la contraseña
     const passwordValidation = validatePasswordStrength(password);
     if (!passwordValidation.isValid) {
       return res.status(400).json({
@@ -50,19 +50,19 @@ const createUser = async (req, res) => {
       });
     }
 
-    // Hash password
+    // Hashear contraseña
     const password_hash = await hashPassword(password);
 
-    // Create new user
+    // Crear nuevo usuario
     const newUser = await User.create({
       username,
       password_hash,
       role,
-      temp_password_flag: true, // Require password change on first login
+      temp_password_flag: true, // Requerir cambio de contraseña en el primer inicio de sesión
       is_active: true
     });
 
-    // Return created user without sensitive data
+    // Devolver usuario creado sin datos sensibles
     res.status(201).json({
       success: true,
       data: {
@@ -86,16 +86,16 @@ const createUser = async (req, res) => {
 };
 
 /**
- * Get all users (with optional filtering)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener todos los usuarios (con filtrado opcional)
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getUsers = async (req, res) => {
   try {
-    const { role, active, search, page = 1, limit = 20 } = req.query; // Include search
+    const { role, active, search, page = 1, limit = 20 } = req.query; // Incluir búsqueda
     const offset = (page - 1) * limit;
     
-    // Build filter conditions
+    // Construir condiciones de filtro
     const where = {};
     if (role) {
       where.role = role;
@@ -104,14 +104,14 @@ const getUsers = async (req, res) => {
       where.is_active = active === 'true';
     }
     
-    // Add search filter if provided
+    // Agregar filtro de búsqueda si se proporciona
     if (search) {
       where.username = {
         [Op.like]: `%${search}%`
       };
     }
 
-    // Find users with pagination
+    // Buscar usuarios con paginación
     const { count, rows: users } = await User.findAndCountAll({
       where,
       attributes: ['id', 'username', 'role', 'temp_password_flag', 'is_active', 'created_at', 'updated_at'],
@@ -120,7 +120,7 @@ const getUsers = async (req, res) => {
       order: [['created_at', 'DESC']]
     });
 
-    // Calculate pagination information
+    // Calcular información de paginación
     const totalPages = Math.ceil(count / limit);
 
     res.status(200).json({
@@ -145,16 +145,16 @@ const getUsers = async (req, res) => {
 };
 
 /**
- * Update a user's information
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Actualizar la información de un usuario
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
     const { username, role } = req.body;
 
-    // Find user
+    // Buscar usuario
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({
@@ -163,7 +163,7 @@ const updateUser = async (req, res) => {
       });
     }
 
-    // Validate role if provided
+    // Validar rol si se proporciona
     if (role && !Object.values(config.roles).includes(role)) {
       return res.status(400).json({
         success: false,
@@ -171,7 +171,7 @@ const updateUser = async (req, res) => {
       });
     }
 
-    // If username is changing, check for duplicates
+    // Si el nombre de usuario cambia, verificar duplicados
     if (username && username !== user.username) {
       const existingUser = await User.findOne({ where: { username } });
       if (existingUser) {
@@ -183,12 +183,12 @@ const updateUser = async (req, res) => {
       user.username = username;
     }
 
-    // Update role if provided
+    // Actualizar rol si se proporciona
     if (role) {
       user.role = role;
     }
 
-    // Save changes
+    // Guardar cambios
     await user.save();
 
     res.status(200).json({
@@ -213,20 +213,20 @@ const updateUser = async (req, res) => {
 };
 
 /**
- * Activate or deactivate a user
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Activar o desactivar un usuario
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 /**
- * Get a user by their ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener un usuario por su ID
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // Find user
+    // Buscar usuario
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({
@@ -263,7 +263,7 @@ const toggleUserActivation = async (req, res) => {
     const { id } = req.params;
     const { is_active } = req.body;
 
-    // Validate input
+    // Validar entrada
     if (is_active === undefined) {
       return res.status(400).json({
         success: false,
@@ -271,7 +271,7 @@ const toggleUserActivation = async (req, res) => {
       });
     }
 
-    // Find user
+    // Buscar usuario
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({
@@ -280,7 +280,7 @@ const toggleUserActivation = async (req, res) => {
       });
     }
 
-    // Prevent admin from deactivating themselves
+    // Evitar que el admin se desactive a sí mismo
     if (user.id === req.user.id && is_active === false) {
       return res.status(400).json({
         success: false,
@@ -288,7 +288,7 @@ const toggleUserActivation = async (req, res) => {
       });
     }
 
-    // Update active status
+    // Actualizar estado activo
     user.is_active = is_active;
     await user.save();
 
@@ -313,20 +313,20 @@ const toggleUserActivation = async (req, res) => {
 };
 
 /**
- * Reset a user's password and set temp password flag
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Restablecer contraseña de usuario y establecer bandera de contraseña temporal
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const resetUserPassword = async (req, res) => {
   try {
     const { id } = req.params;
     let { new_password } = req.body;
 
-    // Generate a temporary password if none provided
+    // Generar una contraseña temporal si no se proporciona ninguna
     if (!new_password) {
       new_password = generateTemporaryPassword();
     } else {
-      // Validate password strength if provided
+      // Validar fortaleza de contraseña si se proporciona
       const passwordValidation = validatePasswordStrength(new_password);
       if (!passwordValidation.isValid) {
         return res.status(400).json({
@@ -336,7 +336,7 @@ const resetUserPassword = async (req, res) => {
       }
     }
 
-    // Find user
+    // Buscar usuario
     const user = await User.findByPk(id);
     if (!user) {
       return res.status(404).json({
@@ -345,12 +345,12 @@ const resetUserPassword = async (req, res) => {
       });
     }
 
-    // Update password and set temp flag
+    // Actualizar contraseña y establecer bandera temporal
     user.password_hash = await hashPassword(new_password);
     user.temp_password_flag = true;
     await user.save();
 
-    // Determine what to include in the response
+    // Determinar qué incluir en la respuesta
     const response = {
       success: true,
       data: {
@@ -363,7 +363,7 @@ const resetUserPassword = async (req, res) => {
       }
     };
 
-    // Include the generated password in response if it was auto-generated
+    // Incluir la contraseña generada en la respuesta si fue autogenerada
     if (!req.body.new_password) {
       response.data.temp_password = new_password;
     }

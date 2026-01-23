@@ -1,6 +1,6 @@
 /**
- * Client Routes for FixTrack
- * Handles routing for client management operations
+ * Rutas de Clientes para FixTrack
+ * Maneja el enrutamiento para operaciones de gestión de clientes
  */
 const express = require('express');
 const router = express.Router();
@@ -8,11 +8,11 @@ const clientController = require('../controllers/clientController');
 const { authenticate, hasRole, requirePasswordChange } = require('../middleware/auth');
 const config = require('../config/config');
 
-// Apply authentication to all client routes
+// Aplicar autenticación a todas las rutas de clientes
 router.use(authenticate);
 router.use(requirePasswordChange);
 
-// Routes accessible to secretaries and admins
+// Rutas accesibles para secretarias y admins
 router.get('/', 
   hasRole([config.roles.SECRETARY, config.roles.ADMIN]),
   clientController.getClients

@@ -1,6 +1,6 @@
 /**
- * Technical operations routes for FixTrack system
- * Handles routes for technicians to manage their assigned orders
+ * Rutas de operaciones técnicas para el sistema FixTrack
+ * Maneja rutas para que los técnicos gestionen sus órdenes asignadas
  */
 const express = require('express');
 const router = express.Router();
@@ -10,23 +10,23 @@ const fs = require('fs');
 const techController = require('../controllers/techController');
 const { authenticate, hasRole, isTechnician, requirePasswordChange } = require('../middleware/auth');
 
-// Configure multer for file uploads
+// Configurar multer para subida de archivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Create directory for order attachments if it doesn't exist
+    // Crear directorio para adjuntos de orden si no existe
     const orderDir = path.join('src/public/uploads/orders', req.params.id);
     fs.mkdirSync(orderDir, { recursive: true });
     cb(null, orderDir);
   },
   filename: function (req, file, cb) {
-    // Generate unique filename with timestamp and original extension
+    // Generar nombre de archivo único con marca de tiempo y extensión original
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
     const ext = path.extname(file.originalname);
     cb(null, file.fieldname + '-' + uniqueSuffix + ext);
   }
 });
 
-// Filter allowed file types
+// Filtrar tipos de archivo permitidos
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
     'image/jpeg', 
@@ -44,63 +44,63 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Setup upload middleware
+// Configurar middleware de subida
 const upload = multer({ 
   storage, 
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB limit
+    fileSize: 5 * 1024 * 1024 // Límite de 5MB
   }
 });
 
-// Apply authentication middleware to all routes
+// Aplicar middleware de autenticación a todas las rutas
 router.use(authenticate);
 router.use(requirePasswordChange);
 
-// Route to get all orders assigned to the technician
+// Ruta para obtener todas las órdenes asignadas al técnico
 router.get('/assigned-orders', 
   hasRole(['technician', 'admin']), 
   techController.getAssignedOrders
 );
 
-// Route to get all orders (not just assigned ones)
+// Ruta para obtener todas las órdenes (no solo las asignadas)
 router.get('/all-orders', 
   hasRole(['technician', 'admin']), 
   techController.getAllOrders
 );
 
-// Route to update order status
+// Ruta para actualizar estado de orden
 router.put('/orders/:id/status', 
   hasRole(['technician', 'admin']), 
   techController.updateOrderStatus
 );
 
-// Route to self-assign an order
+// Ruta para auto-asignar una orden
 router.put('/orders/:id/self-assign', 
   hasRole(['technician', 'admin']), 
   techController.selfAssignOrder
 );
 
-// Route to reassign an order
+// Ruta para reasignar una orden
 router.put('/orders/:id/reassign', 
   hasRole(['technician', 'admin']), 
   techController.reassignOrder
 );
 
-// Route to upload attachments to an order
+// Ruta para subir adjuntos a una orden
 router.post('/orders/:id/attachments', 
   hasRole(['technician', 'admin']), 
   upload.single('file'), 
   techController.addOrderAttachment
 );
 
-// Route to add comments to an order
+// Ruta para agregar comentarios a una orden
 router.post('/orders/:id/comments', 
   hasRole(['technician', 'admin']), 
   techController.addOrderComment
 );
 
-// Error handler for multer
+// Manejador de errores para multer
 router.use((err, req, res, next) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {

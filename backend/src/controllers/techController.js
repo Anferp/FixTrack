@@ -1,15 +1,15 @@
 /**
- * Controller for technician operations on service orders
- * Handles order status updates, attachments, comments, and retrieval of assigned orders
+ * Controlador para operaciones de técnicos en órdenes de servicio
+ * Maneja actualizaciones de estado de órdenes, adjuntos, comentarios y recuperación de órdenes asignadas
  */
 const fs = require('fs');
 const path = require('path');
-const { Order, OrderAttachment, OrderComment, OrderUpdate, User, sequelize } = require('../models'); // Import sequelize if not already
-const { Op } = require('sequelize'); // Import Op for complex queries
+const { Order, OrderAttachment, OrderComment, OrderUpdate, User, sequelize } = require('../models'); // Importar sequelize si no está ya
+const { Op } = require('sequelize'); // Importar Op para consultas complejas
 const config = require('../config/config');
 
 /**
- * Update the status of an order assigned to the technician
+ * Actualizar el estado de una orden asignada al técnico
  */
 const updateOrderStatus = async (req, res) => {
   try {
@@ -18,7 +18,7 @@ const updateOrderStatus = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Validate status
+    // Validar estado
     const validStatuses = ['pending', 'in_review', 'repaired', 'waiting_parts', 'closed'];
     if (!validStatuses.includes(new_status)) {
       return res.status(400).json({ 
@@ -27,7 +27,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
     if (!order) {
       return res.status(404).json({ 
@@ -36,7 +36,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Check if user is authorized (admin or assigned technician)
+    // Verificar si el usuario está autorizado (admin o técnico asignado)
     if (userRole !== config.roles.ADMIN && 
        (userRole !== config.roles.TECHNICIAN || order.assigned_technician_id !== userId)) {
       return res.status(403).json({ 
@@ -45,7 +45,7 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    // Check if the status is actually changing
+    // Verificar si el estado realmente está cambiando
     if (order.status === new_status) {
       return res.status(400).json({
         success: false,
@@ -55,13 +55,13 @@ const updateOrderStatus = async (req, res) => {
 
     const oldStatus = order.status;
 
-    // Update order status
+    // Actualizar estado de la orden
     const updatedOrder = await order.update({
       status: new_status,
       closed_at: new_status === 'closed' ? new Date() : order.closed_at
     });
 
-    // Create a status update record
+    // Crear un registro de actualización de estado
     const update = await OrderUpdate.create({
       order_id: id,
       old_status: oldStatus,
@@ -93,7 +93,7 @@ const updateOrderStatus = async (req, res) => {
 };
 
 /**
- * Upload file attachments to an order
+ * Subir archivos adjuntos a una orden
  */
 const addOrderAttachment = async (req, res) => {
   try {
@@ -101,7 +101,7 @@ const addOrderAttachment = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Check if file was uploaded
+    // Verificar si se subió el archivo
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -109,10 +109,10 @@ const addOrderAttachment = async (req, res) => {
       });
     }
 
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
     if (!order) {
-      // Delete the uploaded file if order doesn't exist
+      // Eliminar el archivo subido si la orden no existe
       if (req.file && req.file.path) {
         fs.unlinkSync(req.file.path);
       }
@@ -122,10 +122,10 @@ const addOrderAttachment = async (req, res) => {
       });
     }
 
-    // Check if user is authorized (admin or assigned technician)
+    // Verificar si el usuario está autorizado (admin o técnico asignado)
     if (userRole !== config.roles.ADMIN && 
        (userRole !== config.roles.TECHNICIAN || order.assigned_technician_id !== userId)) {
-      // Delete the uploaded file if not authorized
+      // Eliminar el archivo subido si no está autorizado
       if (req.file && req.file.path) {
         fs.unlinkSync(req.file.path);
       }
@@ -135,7 +135,7 @@ const addOrderAttachment = async (req, res) => {
       });
     }
 
-    // Create file record in database
+    // Crear registro de archivo en base de datos
     const attachment = await OrderAttachment.create({
       order_id: id,
       file_path: req.file.path,
@@ -156,7 +156,7 @@ const addOrderAttachment = async (req, res) => {
     });
   } catch (error) {
     console.error('Error uploading attachment:', error);
-    // Try to delete the file if there was an error
+    // Intentar eliminar el archivo si hubo un error
     if (req.file && req.file.path) {
       try {
         fs.unlinkSync(req.file.path);
@@ -172,7 +172,7 @@ const addOrderAttachment = async (req, res) => {
 };
 
 /**
- * Add a technical comment to an order
+ * Agregar un comentario técnico a una orden
  */
 const addOrderComment = async (req, res) => {
   try {
@@ -181,7 +181,7 @@ const addOrderComment = async (req, res) => {
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Validate comment type
+    // Validar tipo de comentario
     const validCommentTypes = ['technical', 'status_update'];
     if (!validCommentTypes.includes(comment_type)) {
       return res.status(400).json({
@@ -190,7 +190,7 @@ const addOrderComment = async (req, res) => {
       });
     }
 
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
     if (!order) {
       return res.status(404).json({
@@ -199,7 +199,7 @@ const addOrderComment = async (req, res) => {
       });
     }
 
-    // Check if user is authorized (admin or assigned technician)
+    // Verificar si el usuario está autorizado (admin o técnico asignado)
     if (userRole !== config.roles.ADMIN && 
        (userRole !== config.roles.TECHNICIAN || order.assigned_technician_id !== userId)) {
       return res.status(403).json({
@@ -208,7 +208,7 @@ const addOrderComment = async (req, res) => {
       });
     }
 
-    // Create the comment
+    // Crear el comentario
     const comment = await OrderComment.create({
       order_id: id,
       user_id: userId,
@@ -232,14 +232,14 @@ const addOrderComment = async (req, res) => {
 };
 
 /**
- * Get all orders assigned to the current technician
+ * Obtener todas las órdenes asignadas al técnico actual
  */
 const getAssignedOrders = async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
     
-    // If not a technician, deny access
+    // Si no es técnico, denegar acceso
     if (userRole !== config.roles.TECHNICIAN && userRole !== config.roles.ADMIN) {
       return res.status(403).json({
         success: false,
@@ -247,30 +247,30 @@ const getAssignedOrders = async (req, res) => {
       });
     }
 
-    // Pagination options
+    // Opciones de paginación
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Filter options
+    // Opciones de filtrado
     const whereClause = {};
     
-    // If user is a technician, only show their assigned orders
+    // Si el usuario es técnico, solo mostrar sus órdenes asignadas
     if (userRole === config.roles.TECHNICIAN) {
       whereClause.assigned_technician_id = userId;
     }
     
-    // Filter by status if provided
+    // Filtrar por estado si se proporciona
     if (req.query.status) {
       whereClause.status = req.query.status;
     }
     
-    // Filter by service_type if provided
+    // Filtrar por service_type si se proporciona
     if (req.query.service_type) {
       whereClause.service_type = req.query.service_type;
     }
     
-    // Filter by search text if provided (across multiple fields)
+    // Filtrar por texto de búsqueda si se proporciona (en múltiples campos)
     if (req.query.search) {
       const searchTerm = `%${req.query.search}%`;
       whereClause[Op.or] = [
@@ -280,7 +280,7 @@ const getAssignedOrders = async (req, res) => {
       ];
     }
     
-    // Filter by date range if provided
+    // Filtrar por rango de fecha si se proporciona
     if (req.query.start_date && req.query.end_date) {
       whereClause.created_at = {
         [Op.between]: [new Date(req.query.start_date), new Date(req.query.end_date + 'T23:59:59.999Z')]
@@ -295,7 +295,7 @@ const getAssignedOrders = async (req, res) => {
       };
     }
 
-    // Get orders with count for pagination
+    // Obtener órdenes con conteo para paginación
     const { count, rows } = await Order.findAndCountAll({
       where: whereClause,
       limit,
@@ -325,14 +325,14 @@ const getAssignedOrders = async (req, res) => {
 };
 
 /**
- * Get all orders (not just assigned to the technician)
+ * Obtener todas las órdenes (no solo las asignadas al técnico)
  */
 const getAllOrders = async (req, res) => {
   try {
     const userId = req.user.id;
     const userRole = req.user.role;
     
-    // If not a technician or admin, deny access
+    // Si no es técnico o admin, denegar acceso
     if (userRole !== config.roles.TECHNICIAN && userRole !== config.roles.ADMIN) {
       return res.status(403).json({
         success: false,
@@ -340,25 +340,25 @@ const getAllOrders = async (req, res) => {
       });
     }
 
-    // Pagination options
+    // Opciones de paginación
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const offset = (page - 1) * limit;
 
-    // Filter options
+    // Opciones de filtrado
     const whereClause = {};
     
-    // Filter by status if provided
+    // Filtrar por estado si se proporciona
     if (req.query.status) {
       whereClause.status = req.query.status;
     }
     
-    // Filter by service_type if provided
+    // Filtrar por service_type si se proporciona
     if (req.query.service_type) {
       whereClause.service_type = req.query.service_type;
     }
     
-    // Filter by search text if provided (across multiple fields)
+    // Filtrar por texto de búsqueda si se proporciona (en múltiples campos)
     if (req.query.search) {
       const searchTerm = `%${req.query.search}%`;
       whereClause[Op.or] = [
@@ -368,7 +368,7 @@ const getAllOrders = async (req, res) => {
       ];
     }
     
-    // Filter by date range if provided
+    // Filtrar por rango de fecha si se proporciona
     if (req.query.start_date && req.query.end_date) {
       whereClause.created_at = {
         [Op.between]: [new Date(req.query.start_date), new Date(req.query.end_date + 'T23:59:59.999Z')]
@@ -383,7 +383,7 @@ const getAllOrders = async (req, res) => {
       };
     }
 
-    // Get orders with count for pagination
+    // Obtener órdenes con conteo para paginación
     const { count, rows } = await Order.findAndCountAll({
       where: whereClause,
       limit,
@@ -402,7 +402,7 @@ const getAllOrders = async (req, res) => {
       ]
     });
 
-    // Mark which orders are assigned to the current technician
+    // Marcar qué órdenes están asignadas al técnico actual
     const ordersWithAssignmentInfo = rows.map(order => {
       const orderData = order.toJSON();
       orderData.is_assigned_to_me = (orderData.assigned_technician_id === userId);
@@ -431,14 +431,14 @@ const getAllOrders = async (req, res) => {
 };
 
 /**
- * Self-assign an order to the current technician
+ * Auto-asignar una orden al técnico actual
  */
 const selfAssignOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const technicianId = req.user.id;
     
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
     
     if (!order) {
@@ -448,7 +448,7 @@ const selfAssignOrder = async (req, res) => {
       });
     }
     
-    // Check if order is already assigned to a technician
+    // Verificar si la orden ya está asignada a un técnico
     if (order.assigned_technician_id) {
       return res.status(400).json({
         success: false,
@@ -456,7 +456,7 @@ const selfAssignOrder = async (req, res) => {
       });
     }
     
-    // Check if order is already closed
+    // Verificar si la orden ya está cerrada
     if (order.status === 'closed') {
       return res.status(400).json({
         success: false,
@@ -464,17 +464,17 @@ const selfAssignOrder = async (req, res) => {
       });
     }
     
-    // Update the order with the current technician
+    // Actualizar la orden con el técnico actual
     order.assigned_technician_id = technicianId;
     
-    // If order is in pending status, update it to in_review
+    // Si la orden está en estado pendiente, actualizar a en revisión
     if (order.status === 'pending') {
       order.status = 'in_review';
     }
     
     await order.save();
     
-    // Create record in order updates
+    // Crear registro en actualizaciones de orden
     await OrderUpdate.create({
       order_id: order.id,
       old_status: order.status !== 'in_review' ? order.status : 'pending',
@@ -497,14 +497,14 @@ const selfAssignOrder = async (req, res) => {
 };
 
 /**
- * Reassign an order from another technician to the current technician
+ * Reasignar una orden de otro técnico al técnico actual
  */
 const reassignOrder = async (req, res) => {
   try {
     const { id } = req.params;
     const technicianId = req.user.id;
     
-    // Find the order
+    // Buscar la orden
     const order = await Order.findByPk(id);
     
     if (!order) {
@@ -514,7 +514,7 @@ const reassignOrder = async (req, res) => {
       });
     }
     
-    // Check if order is already assigned to the current technician
+    // Verificar si la orden ya está asignada al técnico actual
     if (order.assigned_technician_id === technicianId) {
       return res.status(400).json({
         success: false,
@@ -522,7 +522,7 @@ const reassignOrder = async (req, res) => {
       });
     }
     
-    // Check if order is already closed
+    // Verificar si la orden ya está cerrada
     if (order.status === 'closed') {
       return res.status(400).json({
         success: false,
@@ -530,14 +530,14 @@ const reassignOrder = async (req, res) => {
       });
     }
     
-    // Save the old technician ID for the update log
+    // Guardar el ID del técnico anterior para el registro de actualización
     const oldTechnicianId = order.assigned_technician_id;
     
-    // Update the order with the current technician
+    // Actualizar la orden con el técnico actual
     order.assigned_technician_id = technicianId;
     await order.save();
     
-    // Create record in order updates
+    // Crear registro en actualizaciones de orden
     await OrderUpdate.create({
       order_id: order.id,
       old_status: order.status,

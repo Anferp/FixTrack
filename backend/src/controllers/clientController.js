@@ -1,21 +1,21 @@
 /**
- * Client Controller for FixTrack
- * Handles client management operations
+ * Controlador de Clientes para FixTrack
+ * Maneja las operaciones de gestión de clientes
  */
 const { Client, Order } = require('../models/index');
 const { Op } = require('sequelize');
 
 /**
- * Get all clients with optional filtering
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener todos los clientes con filtrado opcional
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getClients = async (req, res) => {
   try {
     const { search, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
     
-    // Build search conditions
+    // Construir condiciones de búsqueda
     const whereClause = {};
     if (search) {
       whereClause[Op.or] = [
@@ -25,7 +25,7 @@ const getClients = async (req, res) => {
       ];
     }
     
-    // Get clients with pagination
+    // Obtener clientes con paginación
     const { count, rows: clients } = await Client.findAndCountAll({
       where: whereClause,
       order: [['name', 'ASC']],
@@ -33,7 +33,7 @@ const getClients = async (req, res) => {
       offset
     });
     
-    // Calculate pagination info
+    // Calcular información de paginación
     const totalPages = Math.ceil(count / limit);
     
     return res.status(200).json({
@@ -59,15 +59,15 @@ const getClients = async (req, res) => {
 };
 
 /**
- * Create a new client
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Crear un nuevo cliente
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const createClient = async (req, res) => {
   try {
     const { name, phone, email, address, notes } = req.body;
     
-    // Validate required fields
+    // Validar campos requeridos
     if (!name) {
       return res.status(400).json({
         success: false,
@@ -75,7 +75,7 @@ const createClient = async (req, res) => {
       });
     }
     
-    // Create new client
+    // Crear nuevo cliente
     const client = await Client.create({
       name,
       phone,
@@ -101,15 +101,15 @@ const createClient = async (req, res) => {
 };
 
 /**
- * Get client details by ID
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Obtener detalles del cliente por ID
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const getClientById = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Find client
+    // Buscar cliente
     const client = await Client.findByPk(id);
     
     if (!client) {
@@ -119,7 +119,7 @@ const getClientById = async (req, res) => {
       });
     }
     
-    // Get client's order history
+    // Obtener historial de órdenes del cliente
     const orders = await Order.findAll({
       where: { client_id: id },
       attributes: ['id', 'ticket_code', 'service_type', 'problem_description', 'status', 'created_at'],
@@ -145,16 +145,16 @@ const getClientById = async (req, res) => {
 };
 
 /**
- * Update client details
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Actualizar detalles del cliente
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const updateClient = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, phone, email, address, notes } = req.body;
     
-    // Find client
+    // Buscar cliente
     const client = await Client.findByPk(id);
     
     if (!client) {
@@ -164,7 +164,7 @@ const updateClient = async (req, res) => {
       });
     }
     
-    // Validate required fields
+    // Validar campos requeridos
     if (name !== undefined && !name.trim()) {
       return res.status(400).json({
         success: false,
@@ -172,7 +172,7 @@ const updateClient = async (req, res) => {
       });
     }
     
-    // Update client fields
+    // Actualizar campos del cliente
     if (name !== undefined) client.name = name;
     if (phone !== undefined) client.phone = phone;
     if (email !== undefined) client.email = email;
@@ -198,9 +198,9 @@ const updateClient = async (req, res) => {
 };
 
 /**
- * Check if a phone number or email already exists in the database
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Verificar si un número de teléfono o correo ya existe en la base de datos
+ * @param {Object} req - Objeto de solicitud Express
+ * @param {Object} res - Objeto de respuesta Express
  */
 const checkDuplicate = async (req, res) => {
   try {
